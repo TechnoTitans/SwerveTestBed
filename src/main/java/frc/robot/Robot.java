@@ -50,14 +50,32 @@ public class Robot extends LoggedRobot {
         return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
     };
 
-    public final PowerDistribution powerDistribution = new PowerDistribution(RobotMap.PowerDistributionHub, PowerDistribution.ModuleType.kRev);
+    public final PowerDistribution powerDistribution = new PowerDistribution(
+            RobotMap.PowerDistributionHub, PowerDistribution.ModuleType.kRev
+    );
 
-    public final Swerve swerve = new Swerve(Constants.CURRENT_MODE, HardwareConstants.GYRO, SwerveConstants.FrontLeftModule, SwerveConstants.FrontRightModule, SwerveConstants.BackLeftModule, SwerveConstants.BackRightModule);
+    public final Swerve swerve = new Swerve(
+            Constants.CURRENT_MODE,
+            HardwareConstants.GYRO,
+            SwerveConstants.FrontLeftModule,
+            SwerveConstants.FrontRightModule,
+            SwerveConstants.BackLeftModule,
+            SwerveConstants.BackRightModule
+    );
 
-    public final PhotonVision photonVision = new PhotonVision(Constants.RobotMode.REAL, swerve, swerve.getPoseEstimator());
+    public final PhotonVision photonVision = new PhotonVision(
+            Constants.CURRENT_MODE,
+            swerve,
+            swerve.getPoseEstimator()
+    );
 
     public final Autos autos = new Autos(swerve, photonVision);
-    public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(new AutoOption("DoNothing", autos.doNothing(), Constants.CompetitionType.COMPETITION));
+    public final AutoChooser<String, AutoOption> autoChooser = new AutoChooser<>(
+            new AutoOption(
+                    "DoNothing", autos.doNothing(),
+                    Constants.CompetitionType.COMPETITION
+            )
+    );
 
     public final CommandXboxController driverController = new CommandXboxController(RobotMap.MainController);
 
@@ -67,12 +85,22 @@ public class Robot extends LoggedRobot {
 
     private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
     private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
-    private final Trigger endgameTrigger = new Trigger(() -> DriverStation.getMatchTime() <= 20).and(DriverStation::isFMSAttached).and(teleopEnabled);
+    private final Trigger endgameTrigger = new Trigger(() -> DriverStation.getMatchTime() <= 20)
+            .and(DriverStation::isFMSAttached)
+            .and(teleopEnabled);
 
     @Override
     public void robotInit() {
-        if ((RobotBase.isReal() && Constants.CURRENT_MODE != Constants.RobotMode.REAL) || (RobotBase.isSimulation() && Constants.CURRENT_MODE == Constants.RobotMode.REAL)) {
-            DriverStation.reportWarning(String.format("Potentially incorrect CURRENT_MODE \"%s\" specified, robot is running \"%s\"", Constants.CURRENT_MODE, RobotBase.getRuntimeType().toString()), true);
+        if ((RobotBase.isReal() && Constants.CURRENT_MODE != Constants.RobotMode.REAL) ||
+                (RobotBase.isSimulation() && Constants.CURRENT_MODE == Constants.RobotMode.REAL)) {
+            DriverStation.reportWarning(
+                    String.format(
+                            "Potentially incorrect CURRENT_MODE \"%s\" specified, robot is running \"%s\"",
+                            Constants.CURRENT_MODE,
+                            RobotBase.getRuntimeType().toString()
+                    ),
+                    true
+            );
 
             throw new RuntimeException("Incorrect CURRENT_MODE specified!");
         }
@@ -94,7 +122,14 @@ public class Robot extends LoggedRobot {
                     SignalLogger.setPath(HootLogPath);
                 } catch (final IOException ioException) {
                     SignalLogger.setPath("/U");
-                    DriverStation.reportError(String.format("Failed to create .hoot log path at \"%s\"! Falling back to default.\n%s", HootLogPath, ioException), false);
+                    DriverStation.reportError(
+                            String.format(
+                                    "Failed to create .hoot log path at \"%s\"! Falling back to default.\n%s",
+                                    HootLogPath,
+                                    ioException
+                            ),
+                            false
+                    );
                 }
 
                 Logger.addDataReceiver(new WPILOGWriter(AKitLogPath));

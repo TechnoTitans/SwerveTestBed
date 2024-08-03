@@ -33,13 +33,10 @@ public interface VisionIO {
 
     /**
      * Updates the set of loggable inputs.
-     *
      * @param inputs Logged class of IOInputs
      * @see VisionIOInputs
      */
-    default void updateInputs(final VisionIOInputs inputs) {
-    }
+    default void updateInputs(final VisionIOInputs inputs) {}
 
-    default void periodic() {
-    }
+    default void periodic() {}
 }

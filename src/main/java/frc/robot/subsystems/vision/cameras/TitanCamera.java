@@ -221,9 +221,7 @@ public enum TitanCamera {
         return cameraProperties;
     }
 
-    public double getStdDevFactor() {
-        return stdDevFactor;
-    }
+    public double getStdDevFactor() { return stdDevFactor; }
 
     public TitanCameraCalibration getCameraCalibration() {
         return cameraCalibration;
