@@ -45,14 +45,14 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
     private final OdometryThreadRunner odometryThreadRunner;
     // Cached StatusSignals
-    private final StatusSignal<Double> _drivePosition;
-    private final StatusSignal<Double> _driveVelocity;
-    private final StatusSignal<Double> _driveTorqueCurrent;
-    private final StatusSignal<Double> _driveDeviceTemp;
-    private final StatusSignal<Double> _turnPosition;
-    private final StatusSignal<Double> _turnVelocity;
-    private final StatusSignal<Double> _turnTorqueCurrent;
-    private final StatusSignal<Double> _turnDeviceTemp;
+    private final StatusSignal<Double> drivePosition;
+    private final StatusSignal<Double> driveVelocity;
+    private final StatusSignal<Double> driveTorqueCurrent;
+    private final StatusSignal<Double> driveDeviceTemp;
+    private final StatusSignal<Double> turnPosition;
+    private final StatusSignal<Double> turnVelocity;
+    private final StatusSignal<Double> turnTorqueCurrent;
+    private final StatusSignal<Double> turnDeviceTemp;
 
     // Odometry StatusSignal update buffers
     private final DoubleCircularBuffer timestampBuffer;
@@ -78,18 +78,18 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         this.odometryThreadRunner.registerControlRequest(driveMotor, velocityTorqueCurrentFOC, driveMotor::setControl);
         this.odometryThreadRunner.registerControlRequest(turnMotor, positionVoltage, turnMotor::setControl);
 
-        this._drivePosition = driveMotor.getPosition();
-        this._driveVelocity = driveMotor.getVelocity();
-        this._driveTorqueCurrent = driveMotor.getTorqueCurrent();
-        this._driveDeviceTemp = driveMotor.getDeviceTemp();
-        this._turnPosition = turnMotor.getPosition();
-        this._turnVelocity = turnMotor.getVelocity();
-        this._turnTorqueCurrent = turnMotor.getTorqueCurrent();
-        this._turnDeviceTemp = turnMotor.getDeviceTemp();
+        this.drivePosition = driveMotor.getPosition();
+        this.driveVelocity = driveMotor.getVelocity();
+        this.driveTorqueCurrent = driveMotor.getTorqueCurrent();
+        this.driveDeviceTemp = driveMotor.getDeviceTemp();
+        this.turnPosition = turnMotor.getPosition();
+        this.turnVelocity = turnMotor.getVelocity();
+        this.turnTorqueCurrent = turnMotor.getTorqueCurrent();
+        this.turnDeviceTemp = turnMotor.getDeviceTemp();
 
         this.timestampBuffer = odometryThreadRunner.makeTimestampBuffer();
-        this.drivePositionSignalBuffer = odometryThreadRunner.registerSignal(driveMotor, _drivePosition);
-        this.turnPositionSignalBuffer = odometryThreadRunner.registerSignal(turnMotor, _turnPosition);
+        this.drivePositionSignalBuffer = odometryThreadRunner.registerSignal(driveMotor, this.drivePosition);
+        this.turnPositionSignalBuffer = odometryThreadRunner.registerSignal(turnMotor, this.turnPosition);
     }
 
     @SuppressWarnings("DuplicatedCode")
@@ -140,12 +140,12 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         );
         BaseStatusSignal.setUpdateFrequencyForAll(
                 100,
-                _driveVelocity,
-                _driveTorqueCurrent,
-                _driveDeviceTemp,
-                _turnVelocity,
-                _turnTorqueCurrent,
-                _turnDeviceTemp
+                this.driveVelocity,
+                this.driveTorqueCurrent,
+                this.driveDeviceTemp,
+                this.turnVelocity,
+                this.turnTorqueCurrent,
+                this.turnDeviceTemp
         );
         ParentDevice.optimizeBusUtilizationForAll(driveMotor, turnMotor, turnEncoder);
     }
@@ -154,25 +154,25 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     @Override
     public void updateInputs(final SwerveModuleIOInputs inputs) {
         BaseStatusSignal.refreshAll(
-                _drivePosition,
-                _driveVelocity,
-                _driveTorqueCurrent,
-                _driveDeviceTemp,
-                _turnPosition,
-                _turnVelocity,
-                _turnTorqueCurrent,
-                _turnDeviceTemp
+                this.drivePosition,
+                this.driveVelocity,
+                this.driveTorqueCurrent,
+                this.driveDeviceTemp,
+                this.turnPosition,
+                this.turnVelocity,
+                this.turnTorqueCurrent,
+                this.turnDeviceTemp
         );
 
         inputs.drivePositionRots = getDrivePosition();
-        inputs.driveVelocityRotsPerSec = _driveVelocity.getValue();
-        inputs.driveTorqueCurrentAmps = _driveTorqueCurrent.getValue();
-        inputs.driveTempCelsius = _driveDeviceTemp.getValue();
+        inputs.driveVelocityRotsPerSec = this.driveVelocity.getValue();
+        inputs.driveTorqueCurrentAmps = this.driveTorqueCurrent.getValue();
+        inputs.driveTempCelsius = this.driveDeviceTemp.getValue();
 
         inputs.turnPositionRots = getRawAngle();
-        inputs.turnVelocityRotsPerSec = _turnVelocity.getValue();
-        inputs.turnTorqueCurrentAmps = _turnTorqueCurrent.getValue();
-        inputs.turnTempCelsius = _turnDeviceTemp.getValue();
+        inputs.turnVelocityRotsPerSec = this.turnVelocity.getValue();
+        inputs.turnTorqueCurrentAmps = this.turnTorqueCurrent.getValue();
+        inputs.turnTempCelsius = this.turnDeviceTemp.getValue();
 
         inputs.odometryTimestampsSec = OdometryThreadRunner.writeBufferToArray(timestampBuffer);
         timestampBuffer.clear();
@@ -190,7 +190,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
      * @return the measured wheel (turner) angle, in rotations
      */
     private double getRawAngle() {
-        return Phoenix6Utils.latencyCompensateIfSignalIsGood(_turnPosition, _turnVelocity);
+        return Phoenix6Utils.latencyCompensateIfSignalIsGood(this.turnPosition, this.turnVelocity);
     }
 
     /**
@@ -199,8 +199,12 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
      * @return the measured drive wheel position, in rotations
      */
     public double getDrivePosition() {
-        final double driveWheelPosition = Phoenix6Utils.latencyCompensateIfSignalIsGood(_drivePosition, _driveVelocity);
-        final double turnPosition = Phoenix6Utils.latencyCompensateIfSignalIsGood(_turnPosition, _turnVelocity);
+        final double driveWheelPosition = Phoenix6Utils.latencyCompensateIfSignalIsGood(
+                this.drivePosition, this.driveVelocity
+        );
+        final double turnPosition = Phoenix6Utils.latencyCompensateIfSignalIsGood(
+                this.turnPosition, this.turnVelocity
+        );
         final double driveBackOutWheelRotations = (
                 (turnPosition * couplingRatio)
                         / driveReduction
@@ -212,7 +216,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     @Override
     public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
         final double driveVelocityBackOut = (
-                (_turnVelocity.getValue() * couplingRatio)
+                (this.turnVelocity.getValue() * couplingRatio)
                         / driveReduction
         );
         final double backedOutDriveVelocity = desiredDriverVelocity + driveVelocityBackOut;
