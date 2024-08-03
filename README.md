@@ -1,5 +1,5 @@
 # SwerveTestBed
-FRC 1683's code repository for an empty swerve drivetrain.
+FRC 1683's code repository for a development swerve drivetrain.
 
 ![CI](https://github.com/TechnoTitans/SwerveTestBed/actions/workflows/CI.yml/badge.svg)
 
