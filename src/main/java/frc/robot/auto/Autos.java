@@ -148,7 +148,14 @@ public class Autos {
         final Timer timer = new Timer();
         final AutoTriggers autoTriggers = new AutoTriggers(trajectoryName, swerve::getPose, timer::get);
 
-//        autoTriggers.autoEnabled().whileTrue();
+        final ChoreoTrajectory trajectory0 = autoTriggers.trajectories.get(0);
+        autoTriggers.autoEnabled().whileTrue(
+                Commands.sequence(
+                        resetPose(trajectory0),
+                        Commands.runOnce(timer::reset),
+                        followPath(trajectory0, timer)
+                )
+        );
 
         autoTriggers.atTime(0.88).onTrue(
                 Commands.print("REACHED MARKER")
