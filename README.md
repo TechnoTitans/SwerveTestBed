@@ -1,4 +1,4 @@
-# TitanWare2024
+# SwerveTestBed
 FRC 1683's code repository for an empty swerve drivetrain.
 
 ![CI](https://github.com/TechnoTitans/SwerveTestBed/actions/workflows/CI.yml/badge.svg)
