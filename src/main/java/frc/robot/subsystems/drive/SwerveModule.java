@@ -30,7 +30,7 @@ public class SwerveModule {
         this.moduleIO = switch (robotMode) {
             case REAL -> new SwerveModuleIOTalonFX(constants, odometryThreadRunner);
             case SIM -> new SwerveModuleIOTalonFXSim(constants, odometryThreadRunner);
-            case REPLAY -> new SwerveModuleIO() {
+            case REPLAY, DISABLED -> new SwerveModuleIO() {
             };
         };
         this.moduleIO.config();
@@ -68,6 +68,8 @@ public class SwerveModule {
                         Rotation2d.fromRotations(inputs.turnPositionRots)
                 )
         );
+
+        Logger.recordOutput(logKey + "TurnPositionRots", inputs.turnPositionRots);
 
         Logger.recordOutput(
                 logKey + "/TurnDesiredAbsolutePositionRots",
