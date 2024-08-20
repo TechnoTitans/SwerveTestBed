@@ -29,7 +29,7 @@ public class SwerveConstants {
             1,
             2,
             3,
-            -0.4140625
+            0.083984375
     );
 
     public static final SwerveModuleConstants FrontRightModule = new SwerveModuleConstants(
@@ -39,7 +39,7 @@ public class SwerveConstants {
             4,
             5,
             6,
-            0.07470703125
+            -0.421875
     );
 
     public static final SwerveModuleConstants BackLeftModule = new SwerveModuleConstants(
@@ -49,7 +49,7 @@ public class SwerveConstants {
             7,
             8,
             9,
-            -0.45068359375
+            0.048828125
     );
 
     public static final SwerveModuleConstants BackRightModule = new SwerveModuleConstants(
@@ -59,7 +59,7 @@ public class SwerveConstants {
             10,
             11,
             12,
-            -0.2177734375
+            0.28515625
     );
 
     public record SwerveConfig(
