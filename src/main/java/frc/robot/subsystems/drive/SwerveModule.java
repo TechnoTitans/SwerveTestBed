@@ -69,7 +69,7 @@ public class SwerveModule {
                 )
         );
 
-        Logger.recordOutput(logKey + "TurnPositionRots", inputs.turnPositionRots);
+        Logger.recordOutput(logKey + "/TurnPositionRots", inputs.turnPositionRots);
 
         Logger.recordOutput(
                 logKey + "/TurnDesiredAbsolutePositionRots",
