@@ -112,7 +112,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = driveReduction;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-        driveTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+        driveTalonFXConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
         driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
 
         turnTalonFXConfiguration.Slot0 = new Slot0Configs()
