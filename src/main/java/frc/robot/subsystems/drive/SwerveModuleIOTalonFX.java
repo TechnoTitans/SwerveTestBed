@@ -103,12 +103,12 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
         // TODO: drive and azimuth gains both need to be re-tuned
         driveTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKS(5.6753)
+                .withKS(3.239825)
                 .withKV(0)
-                .withKA(2.5488)
-                .withKP(46.391);
-        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 80;
-        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -80;
+                .withKA(1.34145)
+                .withKP(42);
+        driveTalonFXConfiguration.TorqueCurrent.PeakForwardTorqueCurrent = 70;
+        driveTalonFXConfiguration.TorqueCurrent.PeakReverseTorqueCurrent = -70;
         driveTalonFXConfiguration.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.2;
         driveTalonFXConfiguration.Feedback.SensorToMechanismRatio = driveReduction;
         driveTalonFXConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -116,8 +116,8 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         driveMotor.getConfigurator().apply(driveTalonFXConfiguration);
 
         turnTalonFXConfiguration.Slot0 = new Slot0Configs()
-                .withKP(45)
-                .withKS(0.5);
+                .withKP(30)
+                .withKS(0.3);
         turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimit = 40;
         turnTalonFXConfiguration.CurrentLimits.StatorCurrentLimitEnable = true;
         turnTalonFXConfiguration.CurrentLimits.SupplyCurrentLimit = 40;
