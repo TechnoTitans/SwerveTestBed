@@ -101,6 +101,7 @@ public class Autos {
         }
 
         // TODO: doesn't seem to ever trigger, also, theres probably? a better way to do this check
+        @SuppressWarnings("unused")
         public Trigger atPlace(final double timeSeconds) {
             final Translation2d place = trajectory
                     .sample(timeSeconds, Robot.IsRedAlliance.getAsBoolean())
