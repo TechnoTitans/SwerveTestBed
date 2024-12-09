@@ -14,6 +14,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Robot;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.vision.PhotonVision;
+import org.littletonrobotics.junction.Logger;
 
 import java.util.List;
 import java.util.Set;
@@ -120,13 +121,16 @@ public class Autos {
     }
 
     private Command followPath(final ChoreoTrajectory choreoTrajectory, final Timer timer) {
-        return Commands.runOnce(timer::start)
-                .andThen(followPath(choreoTrajectory))
-                .finallyDo(timer::stop);
+        return Commands.parallel(
+                Commands.run(() -> Logger.recordOutput(LogKey + "/FollowTimer", timer.get())),
+                Commands.runOnce(timer::start)
+                        .andThen(followPath(choreoTrajectory))
+                        .finallyDo(timer::stop)
+        );
     }
 
     private Command resetPose(final ChoreoTrajectory trajectory) {
-        return Commands.defer(() -> swerve.resetPoseCommand(
+        return Commands.defer(() -> photonVision.resetPoseCommand(
                         Robot.IsRedAlliance.getAsBoolean()
                                 ? trajectory.getFlippedInitialPose()
                                 : trajectory.getInitialPose()
