@@ -1,5 +1,6 @@
 package frc.robot.subsystems.drive.constants;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import frc.robot.constants.Constants;
@@ -13,8 +14,8 @@ public class SwerveConstants {
             6.122,
             150.0 / 7.0,
             50.0 / 14.0,
-            Units.inchesToMeters(17.161),
-            Units.inchesToMeters(24.752),
+            Units.inchesToMeters(24),
+            Units.inchesToMeters(24),
             Units.feetToMeters(16.0),
             Units.feetToMeters(80.0),
             12,
@@ -29,7 +30,7 @@ public class SwerveConstants {
             1,
             2,
             3,
-            -0.137
+            0.083984375
     );
 
     public static final SwerveModuleConstants FrontRightModule = new SwerveModuleConstants(
@@ -39,7 +40,7 @@ public class SwerveConstants {
             4,
             5,
             6,
-            0.381
+            -0.421875
     );
 
     public static final SwerveModuleConstants BackLeftModule = new SwerveModuleConstants(
@@ -49,7 +50,7 @@ public class SwerveConstants {
             7,
             8,
             9,
-            0
+            0.048828125
     );
 
     public static final SwerveModuleConstants BackRightModule = new SwerveModuleConstants(
@@ -59,7 +60,7 @@ public class SwerveConstants {
             10,
             11,
             12,
-            -0.429
+            0.28515625
     );
 
     public record SwerveConfig(
