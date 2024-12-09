@@ -2,7 +2,8 @@ package frc.robot.subsystems.vision.result;
 
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.util.Units;
-import frc.robot.subsystems.vision.RealVisionRunner;
+import edu.wpi.first.wpilibj.Timer;
+import frc.robot.constants.Constants;
 import org.photonvision.PhotonUtils;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
@@ -11,7 +12,8 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public class NoteTrackingResult {
-    private static final double DistanceOffsetMeters = Units.inchesToMeters(0);
+    private static final double DistanceOffsetMeters = Units.inchesToMeters(0); //Bounding box Offset (Selected in PV)
+    private static final double AllowableTimestampTimeout = 1;
 
     private final Transform3d robotToCamera;
 
@@ -47,6 +49,10 @@ public class NoteTrackingResult {
             return Optional.empty();
         }
 
+        if (Timer.getFPGATimestamp() - pipelineResult.getTimestampSeconds() > AllowableTimestampTimeout) {
+            return Optional.empty();
+        }
+
         final Optional<Pose2d> optionalRobotPose = timestampedRobotPoseFunction.apply(pipelineResult.getTimestampSeconds());
         return optionalRobotPose.map(pose2d -> getNotePose(pose2d, robotToCamera, bestTarget));
     }
@@ -58,6 +64,10 @@ public class NoteTrackingResult {
 
         final Optional<Pose2d> optionalRobotPose = timestampedRobotPoseFunction.apply(pipelineResult.getTimestampSeconds());
         if (optionalRobotPose.isEmpty()) {
+            return new Pose2d[]{};
+        }
+
+        if (Timer.getFPGATimestamp() - pipelineResult.getTimestampSeconds() > AllowableTimestampTimeout) {
             return new Pose2d[]{};
         }
 
@@ -82,10 +92,10 @@ public class NoteTrackingResult {
     public static double getNoteDistance(final Transform3d robotToCamera, final PhotonTrackedTarget trackedTarget) {
         return PhotonUtils.calculateDistanceToTargetMeters(
                 robotToCamera.getZ(),
-                RealVisionRunner.VisionIONoteTrackingReal.NOTE_HEIGHT_Z,
-                -robotToCamera.getRotation().getY(), // CCW+ convert to CW+
-                Units.degreesToRadians(trackedTarget.getPitch()) // doesn't need negative, PhotonUtils expects CW+
-        ) + DistanceOffsetMeters;
+                Constants.Vision.NOTE_HEIGHT_Z,
+                -robotToCamera.getRotation().getY(), //Convert CCW+ to CW+
+                Units.degreesToRadians(trackedTarget.getPitch())
+        ) / Math.cos(Units.degreesToRadians(trackedTarget.getYaw())) + DistanceOffsetMeters;
     }
 
     public static Pose2d getNotePose(
@@ -93,11 +103,19 @@ public class NoteTrackingResult {
             final Transform3d robotToCamera,
             final PhotonTrackedTarget trackedTarget
     ) {
-        final Transform2d robotToNote = new Transform2d(
-                new Translation2d(getNoteDistance(robotToCamera, trackedTarget), getTargetYaw(trackedTarget)),
-                getTargetYaw(trackedTarget)
+        final Rotation2d targetYaw = getTargetYaw(trackedTarget);
+
+        final Translation2d estimatedTargetTranslation = new Translation2d(
+                getNoteDistance(robotToCamera, trackedTarget),
+                targetYaw
+        ).rotateBy(robotToCamera.getRotation().toRotation2d())
+                .plus(robotToCamera.getTranslation().toTranslation2d());
+
+        final Transform2d estimatedTransform = new Transform2d(
+                estimatedTargetTranslation,
+                targetYaw
         );
 
-        return poseAtTimestamp.transformBy(robotToNote);
+        return poseAtTimestamp.transformBy(estimatedTransform);
     }
 }

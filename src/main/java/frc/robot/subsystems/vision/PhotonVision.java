@@ -4,18 +4,21 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.constants.Constants;
+import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
+import frc.robot.subsystems.drive.estimator.SwerveDrivePoseEstimator;
 import frc.robot.subsystems.vision.cameras.TitanCamera;
 import frc.robot.subsystems.vision.result.NoteTrackingResult;
 import frc.robot.utils.PoseUtils;
 import frc.robot.utils.gyro.GyroUtils;
+import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.subsystems.VirtualSubsystem;
 import org.littletonrobotics.junction.Logger;
 import org.photonvision.EstimatedRobotPose;
@@ -26,6 +29,8 @@ import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import static edu.wpi.first.wpilibj2.command.Commands.runOnce;
 
 public class PhotonVision extends VirtualSubsystem {
     public static final String PhotonLogKey = "Vision";
@@ -101,21 +106,29 @@ public class PhotonVision extends VirtualSubsystem {
                         ),
                         PhotonVision.apriltagFieldLayout,
                         visionSystemSim,
+                        FieldConstants.CENTER_LINE_NOTE_POSES,
                         PhotonVision.makeVisionIOInputsMap(
                                 new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FL_APRILTAG, visionSystemSim),
                                 new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FC_APRILTAG, visionSystemSim),
                                 new SimVisionRunner.VisionIOApriltagsSim(TitanCamera.PHOTON_FR_APRILTAG, visionSystemSim)
+                        ),
+                        PhotonVision.makeVisionIOInputsMap(
+                            new SimVisionRunner.VisionIONoteTrackingSim(TitanCamera.PHOTON_BC_NOTE_TRACKING, visionSystemSim)
                         )
                 );
             }
             case REPLAY -> new ReplayVisionRunner(
                     PhotonVision.apriltagFieldLayout,
                     PhotonVision.makeVisionIOInputsMap(
-                            new ReplayVisionRunner.VisionIOApriltagsReplay(TitanCamera.PHOTON_FL_APRILTAG),
-                            new ReplayVisionRunner.VisionIOApriltagsReplay(TitanCamera.PHOTON_FC_APRILTAG),
-                            new ReplayVisionRunner.VisionIOApriltagsReplay(TitanCamera.PHOTON_FR_APRILTAG)
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_FL_APRILTAG),
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_FC_APRILTAG),
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_FR_APRILTAG)
+                    ),
+                    PhotonVision.makeVisionIOInputsMap(
+                            new ReplayVisionRunner.VisionIOReplay(TitanCamera.PHOTON_BC_NOTE_TRACKING)
                     )
             );
+            case DISABLED -> new PhotonVisionRunner() {};
         };
 
         this.swerve = swerve;
@@ -245,6 +258,11 @@ public class PhotonVision extends VirtualSubsystem {
             final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
             final String logKey = PhotonLogKey + "/" + inputs.name;
 
+            Logger.recordOutput(
+                    logKey + "/CameraPose",
+                    new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTE)
+            );
+
             final EstimatedRobotPose estimatedRobotPose = runner.getEstimatedRobotPose(visionIO);
             if (estimatedRobotPose != null) {
                 final EstimatedRobotPose lastEstimatedPose = lastEstimatedRobotPose.get(visionIO);
@@ -276,22 +294,32 @@ public class PhotonVision extends VirtualSubsystem {
             final VisionIO.VisionIOInputs inputs = visionIOInputsEntry.getValue();
             final String logKey = PhotonLogKey + "/" + inputs.name;
 
+            Logger.recordOutput(
+                    logKey + "/CameraPose",
+                    new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTE)
+            );
+
             final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
             if (noteTrackingResult != null) {
                 Logger.recordOutput(logKey + "/HasTargets", noteTrackingResult.hasTargets);
                 final Optional<Pose2d> optionalBestNotePose = noteTrackingResult
-                        .getBestNotePose(timestamp -> Optional.of(swerve.getPose()));
+                        .getBestNotePose(swerve::getPose);
 
                 Logger.recordOutput(logKey + "/HasBestNotePose", optionalBestNotePose.isPresent());
                 Logger.recordOutput(
                         logKey + "/BestNotePose",
-                        optionalBestNotePose.orElseGet(Pose2d::new)
+                        new Pose3d(optionalBestNotePose.orElseGet(Pose2d::new))
                 );
 
                 final Pose2d[] notePose2ds = noteTrackingResult
-                        .getNotePoses(timestamp -> Optional.of(swerve.getPose()));
+                        .getNotePoses(swerve::getPose);
 
-                Logger.recordOutput(logKey + "/NotePoses", notePose2ds);
+                final Pose3d[] notePose3ds = new Pose3d[notePose2ds.length];
+                for (int i = 0; i < notePose2ds.length; i++) {
+                    notePose3ds[i] = PoseUtils.note2dTo3d(notePose2ds[i]);
+                }
+
+                Logger.recordOutput(logKey + "/NotePoses", notePose3ds);
             } else {
                 Logger.recordOutput(logKey + "/HasTargets", false);
             }
@@ -339,11 +367,17 @@ public class PhotonVision extends VirtualSubsystem {
 
     @Override
     public void periodic() {
+        final double visionIOPeriodicStart = Logger.getRealTimestamp();
         runner.periodic();
 
         // Update and log PhotonVision results
         update();
         updateOutputs();
+
+        Logger.recordOutput(
+                PhotonLogKey + "/PeriodicIOPeriodMs",
+                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - visionIOPeriodicStart)
+        );
     }
 
     public void resetPosition(final Pose2d robotPose, final Rotation2d robotYaw) {
@@ -362,13 +396,17 @@ public class PhotonVision extends VirtualSubsystem {
         resetPosition(robotPose, swerve.getYaw());
     }
 
+    public Command resetPoseCommand(final Pose2d robotPose) {
+        return runOnce(() -> resetPosition(robotPose));
+    }
+
     public List<Pose2d> getNotePoses() {
         final List<Pose2d> notePoses = new ArrayList<>();
         for (final VisionIO visionIO : noteTrackingVisionIOInputsMap.keySet()) {
             final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
             if (noteTrackingResult != null) {
                 notePoses.addAll(Arrays.asList(noteTrackingResult
-                        .getNotePoses(timestamp -> Optional.of(swerve.getPose()))));
+                        .getNotePoses(swerve::getPose)));
             }
         }
         return notePoses;

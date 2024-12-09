@@ -13,7 +13,6 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
@@ -37,6 +36,7 @@ import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
+import frc.robot.subsystems.drive.estimator.SwerveDrivePoseEstimator;
 import frc.robot.subsystems.drive.trajectory.HolonomicChoreoController;
 import frc.robot.subsystems.drive.trajectory.HolonomicDriveWithPIDController;
 import frc.robot.subsystems.gyro.Gyro;
@@ -355,11 +355,14 @@ public class Swerve extends SubsystemBase {
 
     /**
      * Get the estimated {@link Pose2d} of the robot from the {@link SwerveDrivePoseEstimator}.
-     *
      * @return the estimated position of the robot, as a {@link Pose2d}
      */
     public Pose2d getPose() {
         return poseEstimator.getEstimatedPosition();
+    }
+
+    public Optional<Pose2d> getPose(final double atTimestamp) {
+        return poseEstimator.sampleAt(atTimestamp);
     }
 
     public Gyro getGyro() {
@@ -402,12 +405,8 @@ public class Swerve extends SubsystemBase {
         return runOnce(this::zeroRotation);
     }
 
-    public void resetPose(final Pose2d robotPose) {
+    private void resetPose(final Pose2d robotPose) {
         poseEstimator.resetPosition(gyro.getYawRotation2d(), getModulePositions(), robotPose);
-    }
-
-    public Command resetPoseCommand(final Pose2d robotPose) {
-        return runOnce(() -> resetPose(robotPose));
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
@@ -427,7 +426,7 @@ public class Swerve extends SubsystemBase {
     }
 
     public SwerveModuleState[] getModuleStates() {
-        return new SwerveModuleState[]{
+        return new SwerveModuleState[] {
                 frontLeft.getState(),
                 frontRight.getState(),
                 backLeft.getState(),
@@ -436,7 +435,7 @@ public class Swerve extends SubsystemBase {
     }
 
     public SwerveModuleState[] getModuleLastDesiredStates() {
-        return new SwerveModuleState[]{
+        return new SwerveModuleState[] {
                 frontLeft.getLastDesiredState(),
                 frontRight.getLastDesiredState(),
                 backLeft.getLastDesiredState(),
@@ -445,7 +444,7 @@ public class Swerve extends SubsystemBase {
     }
 
     public SwerveModulePosition[] getModulePositions() {
-        return new SwerveModulePosition[]{
+        return new SwerveModulePosition[] {
                 frontLeft.getPosition(),
                 frontRight.getPosition(),
                 backLeft.getPosition(),
@@ -455,20 +454,6 @@ public class Swerve extends SubsystemBase {
 
     public void drive(final SwerveModuleState[] states) {
         SwerveDriveKinematics.desaturateWheelSpeeds(states, maxLinearVelocity);
-        frontLeft.setDesiredState(states[0]);
-        frontRight.setDesiredState(states[1]);
-        backLeft.setDesiredState(states[2]);
-        backRight.setDesiredState(states[3]);
-    }
-
-    public void drive(final SwerveModuleState[] states, final ChassisSpeeds desiredSpeeds) {
-        SwerveDriveKinematics.desaturateWheelSpeeds(
-                states,
-                desiredSpeeds,
-                maxLinearVelocity,
-                maxLinearVelocity,
-                maxAngularVelocity
-        );
 
         frontLeft.setDesiredState(states[0]);
         frontRight.setDesiredState(states[1]);
@@ -477,9 +462,9 @@ public class Swerve extends SubsystemBase {
     }
 
     public void drive(
-            final double xSpeed,
-            final double ySpeed,
-            final double omega,
+            final double xSpeedMeterPerSec,
+            final double ySpeedMetersPerSec,
+            final double omegaRadsPerSec,
             final boolean fieldRelative,
             final boolean invertYaw
     ) {
@@ -487,27 +472,33 @@ public class Swerve extends SubsystemBase {
         if (fieldRelative) {
             final Rotation2d poseYaw = getYaw();
             speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-                    xSpeed,
-                    ySpeed,
-                    omega,
+                    xSpeedMeterPerSec,
+                    ySpeedMetersPerSec,
+                    omegaRadsPerSec,
                     invertYaw
                             ? poseYaw.plus(Rotation2d.fromRadians(Math.PI))
                             : poseYaw
             );
         } else {
-            speeds = new ChassisSpeeds(xSpeed, ySpeed, omega);
+            speeds = new ChassisSpeeds(xSpeedMeterPerSec, ySpeedMetersPerSec, omegaRadsPerSec);
         }
 
         drive(speeds);
     }
 
     public void drive(final ChassisSpeeds speeds) {
-        final ChassisSpeeds correctedSpeeds = ChassisSpeeds.discretize(
-                speeds,
-                4 * Constants.LOOP_PERIOD_SECONDS
+        final SwerveModuleState[] moduleStates = kinematics.toSwerveModuleStates(
+                speeds, Config.centerOfRotationMeters()
         );
 
-        drive(kinematics.toSwerveModuleStates(correctedSpeeds), speeds);
+        SwerveDriveKinematics.desaturateWheelSpeeds(moduleStates, maxLinearVelocity);
+
+        final ChassisSpeeds correctedSpeeds = ChassisSpeeds.discretize(
+                kinematics.toChassisSpeeds(moduleStates),
+                Constants.LOOP_PERIOD_SECONDS
+        );
+
+        drive(kinematics.toSwerveModuleStates(correctedSpeeds));
     }
 
     public Command teleopDriveCommand(
@@ -634,7 +625,6 @@ public class Swerve extends SubsystemBase {
         });
     }
 
-
     public Command driveToOptionalPose(final Supplier<Optional<Pose2d>> poseSupplier) {
         return Commands.sequence(
                 runOnce(() -> {
@@ -660,7 +650,6 @@ public class Swerve extends SubsystemBase {
 
     /**
      * Drive all modules to a raw {@link SwerveModuleState}
-     *
      * @param s1 speed of module 1 (m/s)
      * @param s2 speed of module 2 (m/s)
      * @param s3 speed of module 3 (m/s)
@@ -682,7 +671,7 @@ public class Swerve extends SubsystemBase {
             final double a3,
             final double a4
     ) {
-        drive(new SwerveModuleState[]{
+        drive(new SwerveModuleState[] {
                 new SwerveModuleState(s1, Rotation2d.fromDegrees(a1)),
                 new SwerveModuleState(s2, Rotation2d.fromDegrees(a2)),
                 new SwerveModuleState(s3, Rotation2d.fromDegrees(a3)),
@@ -692,7 +681,6 @@ public class Swerve extends SubsystemBase {
 
     /**
      * Zero all modules
-     *
      * @see Swerve#rawSet(double, double, double, double, double, double, double, double)
      */
     @SuppressWarnings("unused")
@@ -702,7 +690,6 @@ public class Swerve extends SubsystemBase {
 
     /**
      * Put modules into an X pattern (significantly reduces the swerve's ability to coast/roll)
-     *
      * @see Swerve#rawSet(double, double, double, double, double, double, double, double)
      */
     public void wheelX() {
@@ -716,7 +703,6 @@ public class Swerve extends SubsystemBase {
 
     /**
      * Set the desired {@link NeutralModeValue} of all module drive motors
-     *
      * @param neutralMode the desired {@link NeutralModeValue}
      * @see SwerveModule#setNeutralMode(NeutralModeValue)
      */

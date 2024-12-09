@@ -1,6 +1,8 @@
 package frc.robot.constants;
 
+import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
+import org.photonvision.estimation.TargetModel;
 
 public interface SimConstants {
     // Assume 2mOhm resistance for voltage drop calculation
@@ -27,5 +29,10 @@ public interface SimConstants {
          * Simulated steer voltage required to overcome friction.
          */
         double STEER_KS_VOLTS = 0.25;
+    }
+
+    interface Vision {
+        TargetModel NOTE_TARGET_MODEL =
+                new TargetModel(Units.inchesToMeters(14), Units.inchesToMeters(14), Units.inchesToMeters(2));
     }
 }
