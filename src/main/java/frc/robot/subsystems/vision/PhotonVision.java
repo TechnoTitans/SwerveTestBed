@@ -4,16 +4,18 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
-import frc.robot.subsystems.drive.estimator.SwerveDrivePoseEstimator;
 import frc.robot.subsystems.vision.cameras.TitanCamera;
 import frc.robot.subsystems.vision.result.NoteTrackingResult;
 import frc.robot.utils.PoseUtils;
@@ -44,19 +46,8 @@ public class PhotonVision extends VirtualSubsystem {
     public static final AprilTagFieldLayout apriltagFieldLayout;
 
     static {
-        AprilTagFieldLayout layout;
-        try {
-            layout = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
-        } catch (final UncheckedIOException uncheckedIOException) {
-            layout = null;
-            DriverStation.reportError("Failed to load AprilTagFieldLayout", uncheckedIOException.getStackTrace());
-        }
-
-        apriltagFieldLayout = layout;
-
-        if (apriltagFieldLayout != null) {
-            apriltagFieldLayout.setOrigin(AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide);
-        }
+        apriltagFieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2024Crescendo);
+        apriltagFieldLayout.setOrigin(AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide);
     }
 
     @SafeVarargs
@@ -147,7 +138,8 @@ public class PhotonVision extends VirtualSubsystem {
         ESTIMATED_POSE_OR_TIMESTAMP_OR_TARGETS_INVALID(2),
         POSE_NOT_IN_FIELD(3),
         LAST_ESTIMATED_POSE_TIMESTAMP_INVALID_OR_TOO_CLOSE(4),
-        POSE_IMPOSSIBLE_VELOCITY(5);
+        POSE_IMPOSSIBLE_VELOCITY(5),
+        FUTURE_TIMESTAMP(6);
 
         private final int id;
         EstimationRejectionReason(final int id) {
@@ -206,6 +198,10 @@ public class PhotonVision extends VirtualSubsystem {
         //  if the last estimation had no timestamp or was very close
 //            return EstimationRejectionReason.LAST_ESTIMATED_POSE_TIMESTAMP_INVALID_OR_TOO_CLOSE;
 //        }
+
+        if (estimatedRobotPose.timestampSeconds > Timer.getFPGATimestamp()) {
+            return EstimationRejectionReason.FUTURE_TIMESTAMP;
+        }
 
         // Only try calculating this rejection strategy if time > 0
         if (secondsSinceLastUpdate > 0) {
@@ -367,7 +363,7 @@ public class PhotonVision extends VirtualSubsystem {
 
     @Override
     public void periodic() {
-        final double visionIOPeriodicStart = Logger.getRealTimestamp();
+        final double visionIOPeriodicStart = RobotController.getFPGATime();
         runner.periodic();
 
         // Update and log PhotonVision results
@@ -376,7 +372,7 @@ public class PhotonVision extends VirtualSubsystem {
 
         Logger.recordOutput(
                 PhotonLogKey + "/PeriodicIOPeriodMs",
-                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - visionIOPeriodicStart)
+                LogUtils.microsecondsToMilliseconds(RobotController.getFPGATime() - visionIOPeriodicStart)
         );
     }
 

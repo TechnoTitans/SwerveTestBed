@@ -2,6 +2,7 @@ package frc.robot.subsystems.gyro;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.wpilibj.RobotController;
 import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.OdometryThreadRunner;
@@ -15,7 +16,7 @@ public class Gyro {
     private final GyroIO gyroIO;
 
     private final HardwareConstants.GyroConstants gyroConstants;
-    private final GyroIOInputsAutoLogged inputs;
+//    private final GyroIOInputsAutoLogged inputs;
     private final boolean isReal;
 
     public Gyro(
@@ -44,14 +45,14 @@ public class Gyro {
     }
 
     public void periodic() {
-        final double gyroPeriodicUpdateStart = Logger.getRealTimestamp();
+        final double gyroPeriodicUpdateStart = RobotController.getFPGATime();
 
         gyroIO.periodic();
         Logger.processInputs(LogKey, inputs);
 
         Logger.recordOutput(
                 LogKey + "/PeriodicIOPeriodMs",
-                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - gyroPeriodicUpdateStart)
+                LogUtils.microsecondsToMilliseconds(RobotController.getFPGATime() - gyroPeriodicUpdateStart)
         );
     }
 

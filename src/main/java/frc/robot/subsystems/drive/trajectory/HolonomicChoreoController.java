@@ -1,9 +1,8 @@
 package frc.robot.subsystems.drive.trajectory;
 
-import com.choreo.lib.ChoreoTrajectoryState;
+import choreo.trajectory.SwerveSample;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 
 public class HolonomicChoreoController {
@@ -31,46 +30,24 @@ public class HolonomicChoreoController {
 
     public ChassisSpeeds calculate(
             final Pose2d pose,
-            final ChoreoTrajectoryState referenceState
+            final SwerveSample swerveSample
     ) {
-        double xFF = referenceState.velocityX;
-        double yFF = referenceState.velocityY;
-        double rotationFF = referenceState.angularVelocity;
+        double xFF = swerveSample.vx;
+        double yFF = swerveSample.vy;
+        double rotationFF = swerveSample.omega;
 
-        double xFeedback = xController.calculate(pose.getX(), referenceState.x);
-        double yFeedback = yController.calculate(pose.getY(), referenceState.y);
+        double xFeedback = xController.calculate(pose.getX(), swerveSample.x);
+        double yFeedback = yController.calculate(pose.getY(), swerveSample.y);
         double rotationFeedback =
-                rotationController.calculate(pose.getRotation().getRadians(), referenceState.heading);
+                rotationController.calculate(pose.getRotation().getRadians(), swerveSample.heading);
 
-        return ChassisSpeeds.fromFieldRelativeSpeeds(
+        final ChassisSpeeds speeds = new ChassisSpeeds(
                 xFF + xFeedback,
                 yFF + yFeedback,
-                rotationFF + rotationFeedback,
-                pose.getRotation()
+                rotationFF + rotationFeedback
         );
-    }
+        speeds.toFieldRelativeSpeeds(pose.getRotation());
 
-    public ChassisSpeeds calculate(
-            final Pose2d pose,
-            final ChoreoTrajectoryState referenceState,
-            final Rotation2d headingOverride
-    ) {
-        double xFF = referenceState.velocityX;
-        double yFF = referenceState.velocityY;
-
-        double xFeedback = xController.calculate(pose.getX(), referenceState.x);
-        double yFeedback = yController.calculate(pose.getY(), referenceState.y);
-        double rotationFeedback =
-                rotationController.calculate(
-                        pose.getRotation().getRadians(),
-                        headingOverride.getRadians()
-                );
-
-        return ChassisSpeeds.fromFieldRelativeSpeeds(
-                xFF + xFeedback,
-                yFF + yFeedback,
-                rotationFeedback,
-                pose.getRotation()
-        );
+        return speeds;
     }
 }

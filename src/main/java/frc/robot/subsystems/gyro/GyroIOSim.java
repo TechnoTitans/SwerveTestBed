@@ -10,6 +10,8 @@ import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.util.DoubleCircularBuffer;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.OdometryThreadRunner;
@@ -31,12 +33,12 @@ public class GyroIOSim implements GyroIO {
     private Rotation2d rawGyroYaw = Rotation2d.fromDegrees(0);
 
     // Cached StatusSignals
-    private final StatusSignal<Double> yaw;
-    private final StatusSignal<Double> pitch;
-    private final StatusSignal<Double> roll;
-    private final StatusSignal<Double> yawVelocity;
-    private final StatusSignal<Double> pitchVelocity;
-    private final StatusSignal<Double> rollVelocity;
+    private final StatusSignal<Angle> yaw;
+    private final StatusSignal<Angle> pitch;
+    private final StatusSignal<Angle> roll;
+    private final StatusSignal<AngularVelocity> yawVelocity;
+    private final StatusSignal<AngularVelocity> pitchVelocity;
+    private final StatusSignal<AngularVelocity> rollVelocity;
     private final StatusSignal<Boolean> faultHardware;
 
     // StatusSignal buffers for high-freq odometry

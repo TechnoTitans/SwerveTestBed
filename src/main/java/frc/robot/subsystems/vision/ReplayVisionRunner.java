@@ -48,7 +48,6 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
             final PhotonPoseEstimator photonPoseEstimator = new PhotonPoseEstimator(
                     aprilTagFieldLayout,
                     Constants.Vision.MULTI_TAG_POSE_STRATEGY,
-                    visionIOApriltagsReplay.photonCamera,
                     visionIOApriltagsReplay.titanCamera.getRobotToCameraTransform()
             );
             photonPoseEstimator.setMultiTagFallbackStrategy(PhotonPoseEstimator.PoseStrategy.LOWEST_AMBIGUITY);
@@ -90,8 +89,6 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
             );
 
             final PhotonPipelineResult result = inputs.latestResult;
-            VisionUtils.correctPipelineResultTimestamp(result);
-
             VisionUtils.updatePoseEstimator(
                     photonPoseEstimatorMap.get(visionIO),
                     result
@@ -116,8 +113,6 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
             );
 
             final PhotonPipelineResult pipelineResult = inputs.latestResult;
-            VisionUtils.correctPipelineResultTimestamp(pipelineResult);
-
             Logger.recordOutput(
                     String.format("%s/%s/HasTarget", PhotonVision.PhotonLogKey, visionIONames.get(visionIO)),
                     pipelineResult.hasTargets()

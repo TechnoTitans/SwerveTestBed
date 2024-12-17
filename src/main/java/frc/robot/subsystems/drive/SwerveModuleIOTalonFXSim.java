@@ -10,11 +10,15 @@ import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.AbsoluteSensorRangeValue;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.units.measure.Temperature;
 import edu.wpi.first.util.DoubleCircularBuffer;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Notifier;
@@ -55,14 +59,14 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     private final DeltaTime deltaTime;
 
     // Cached StatusSignals
-    private final StatusSignal<Double> drivePosition;
-    private final StatusSignal<Double> driveVelocity;
-    private final StatusSignal<Double> driveTorqueCurrent;
-    private final StatusSignal<Double> driveDeviceTemp;
-    private final StatusSignal<Double> turnPosition;
-    private final StatusSignal<Double> turnVelocity;
-    private final StatusSignal<Double> turnTorqueCurrent;
-    private final StatusSignal<Double> turnDeviceTemp;
+    private final StatusSignal<Angle> drivePosition;
+    private final StatusSignal<AngularVelocity> driveVelocity;
+    private final StatusSignal<Current> driveTorqueCurrent;
+    private final StatusSignal<Temperature> driveDeviceTemp;
+    private final StatusSignal<Angle> turnPosition;
+    private final StatusSignal<AngularVelocity> turnVelocity;
+    private final StatusSignal<Current> turnTorqueCurrent;
+    private final StatusSignal<Temperature> turnDeviceTemp;
 
     // Odometry StatusSignal update buffers
     private final DoubleCircularBuffer timestampBuffer;
@@ -76,10 +80,14 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         this.driveMotor = new TalonFX(constants.driveMotorId(), constants.moduleCANBus());
         this.turnMotor = new TalonFX(constants.turnMotorId(), constants.moduleCANBus());
 
+        final DCMotor driveDCMotor = DCMotor.getKrakenX60Foc(1);
         final DCMotorSim driveDCMotorSim = new DCMotorSim(
-                DCMotor.getKrakenX60Foc(1),
-                driveReduction,
-                SimConstants.SwerveModules.DRIVE_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED
+                LinearSystemId.createDCMotorSystem(
+                        driveDCMotor,
+                        SimConstants.SwerveModules.DRIVE_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED,
+                        driveReduction
+                ),
+                driveDCMotor
         );
 
         this.driveSim = new TalonFXSim(
@@ -93,10 +101,14 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
                 driveDCMotorSim::getAngularVelocityRadPerSec
         );
 
+        final DCMotor turnDCMotor = DCMotor.getFalcon500Foc(1);
         final DCMotorSim turnDCMotorSim = new DCMotorSim(
-                DCMotor.getFalcon500Foc(1),
-                turnReduction,
-                SimConstants.SwerveModules.TURN_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED
+                LinearSystemId.createDCMotorSystem(
+                        turnDCMotor,
+                        SimConstants.SwerveModules.TURN_WHEEL_MOMENT_OF_INERTIA_KG_M_SQUARED,
+                        turnReduction
+                ),
+                turnDCMotor
         );
 
         this.turnEncoder = new CANcoder(constants.turnEncoderId(), constants.moduleCANBus());
@@ -153,7 +165,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     public void config() {
         final CANcoderConfiguration canCoderConfiguration = new CANcoderConfiguration();
         canCoderConfiguration.MagnetSensor.MagnetOffset = -magnetOffset;
-        canCoderConfiguration.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue.Signed_PlusMinusHalf;
+        canCoderConfiguration.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 0.5;
         turnEncoder.getConfigurator().apply(canCoderConfiguration);
 
         // TODO: I think we need to look at VoltageConfigs and/or CurrentLimitConfigs for limiting the
@@ -211,14 +223,14 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         );
 
         inputs.drivePositionRots = getDrivePosition();
-        inputs.driveVelocityRotsPerSec = this.driveVelocity.getValue();
-        inputs.driveTorqueCurrentAmps = this.driveTorqueCurrent.getValue();
-        inputs.driveTempCelsius = this.driveDeviceTemp.getValue();
+        inputs.driveVelocityRotsPerSec = this.driveVelocity.getValueAsDouble();
+        inputs.driveTorqueCurrentAmps = this.driveTorqueCurrent.getValueAsDouble();
+        inputs.driveTempCelsius = this.driveDeviceTemp.getValueAsDouble();
 
         inputs.turnPositionRots = getRawAngle();
-        inputs.turnVelocityRotsPerSec = this.turnVelocity.getValue();
-        inputs.turnTorqueCurrentAmps = this.turnTorqueCurrent.getValue();
-        inputs.turnTempCelsius = this.turnDeviceTemp.getValue();
+        inputs.turnVelocityRotsPerSec = this.turnVelocity.getValueAsDouble();
+        inputs.turnTorqueCurrentAmps = this.turnTorqueCurrent.getValueAsDouble();
+        inputs.turnTempCelsius = this.turnDeviceTemp.getValueAsDouble();
 
         inputs.odometryTimestampsSec = OdometryThreadRunner.writeBufferToArray(timestampBuffer);
         timestampBuffer.clear();
@@ -257,7 +269,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
     @Override
     public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
         final double driveVelocityBackOut = (
-                (this.turnVelocity.getValue() * couplingRatio)
+                (this.turnVelocity.getValueAsDouble() * couplingRatio)
                         / driveReduction
         );
         final double backedOutDriveVelocity = desiredDriverVelocity + driveVelocityBackOut;

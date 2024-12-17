@@ -9,7 +9,7 @@ import frc.robot.utils.closeables.ToClose;
 import org.littletonrobotics.junction.LogTable;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.inputs.LoggableInputs;
-import org.littletonrobotics.junction.networktables.LoggedDashboardInput;
+import org.littletonrobotics.junction.networktables.LoggedNetworkInput;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-public class AutoChooser<I, V extends AutoOption> implements AutoCloseable, LoggedDashboardInput {
+public class AutoChooser<I, V extends AutoOption> extends LoggedNetworkInput implements AutoCloseable {
     private final String ntTableName;
 
     private final StringArrayPublisher autoPublisher;
@@ -37,7 +37,6 @@ public class AutoChooser<I, V extends AutoOption> implements AutoCloseable, Logg
     };
 
     private final V defaultAuto;
-
     private String selectedAuto;
 
     public AutoChooser(final V defaultAuto) {

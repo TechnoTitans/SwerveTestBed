@@ -4,6 +4,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.wpilibj.RobotController;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
 import frc.robot.utils.logging.LogUtils;
@@ -13,7 +14,7 @@ public class SwerveModule {
     private final String name;
     private final String logKey;
     private final SwerveModuleIO moduleIO;
-    private final SwerveModuleIOInputsAutoLogged inputs;
+//    private final SwerveModuleIOInputsAutoLogged inputs;
 
     private final double wheelCircumferenceMeters = SwerveConstants.Config.wheelCircumferenceMeters();
     private SwerveModulePosition[] odometryPositions;
@@ -47,7 +48,7 @@ public class SwerveModule {
     }
 
     public void periodic() {
-        final double modulePeriodicUpdateStart = Logger.getRealTimestamp();
+        final double modulePeriodicUpdateStart = RobotController.getFPGATime();
         Logger.processInputs(logKey, inputs);
 
         final int samples = inputs.odometryTimestampsSec.length;
@@ -78,7 +79,7 @@ public class SwerveModule {
 
         Logger.recordOutput(
                 logKey + "/PeriodicIOPeriodMs",
-                LogUtils.microsecondsToMilliseconds(Logger.getRealTimestamp() - modulePeriodicUpdateStart)
+                LogUtils.microsecondsToMilliseconds(RobotController.getFPGATime() - modulePeriodicUpdateStart)
         );
     }
 
@@ -224,11 +225,11 @@ public class SwerveModule {
     public void setDesiredState(final SwerveModuleState state) {
         final Rotation2d currentWheelRotation = getAngle();
 
-        final SwerveModuleState wantedState = SwerveModuleState.optimize(state, currentWheelRotation);
-        final double desiredDriverVelocity = computeDesiredDriverVelocity(wantedState, currentWheelRotation);
-        final double desiredTurnerRotations = computeDesiredTurnerRotations(wantedState);
+        state.optimize(currentWheelRotation);
+        final double desiredDriverVelocity = computeDesiredDriverVelocity(state, currentWheelRotation);
+        final double desiredTurnerRotations = computeDesiredTurnerRotations(state);
 
-        this.lastDesiredState = wantedState;
+        this.lastDesiredState = state;
         moduleIO.setInputs(desiredDriverVelocity, desiredTurnerRotations);
     }
 

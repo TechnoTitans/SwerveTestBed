@@ -7,6 +7,10 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfigurator;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
+import edu.wpi.first.units.Measure;
+import edu.wpi.first.units.PerUnit;
+import edu.wpi.first.units.TimeUnit;
+import edu.wpi.first.units.Unit;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.constants.Constants;
 import frc.robot.constants.SimConstants;
@@ -28,17 +32,19 @@ public class Phoenix6Utils {
      * @see StatusCode
      * @see BaseStatusSignal#getLatencyCompensatedValue(StatusSignal, StatusSignal)
      */
-    public static double latencyCompensateIfSignalIsGood(
-            final StatusSignal<Double> refreshedSignal,
-            final StatusSignal<Double> refreshedDeltaSignal
+    public static
+    <U extends Unit, U_PER_SEC extends PerUnit<U, TimeUnit>, MEAS extends Measure<U>, MEAS_PER_SEC extends Measure<U_PER_SEC>>
+    double latencyCompensateIfSignalIsGood(
+            final StatusSignal<MEAS> refreshedSignal,
+            final StatusSignal<MEAS_PER_SEC> refreshedDeltaSignal
     ) {
         if (refreshedSignal.getStatus().isOK() && refreshedDeltaSignal.getStatus().isOK()) {
             return BaseStatusSignal.getLatencyCompensatedValue(
                     refreshedSignal,
                     refreshedDeltaSignal
-            );
+            ).magnitude();
         } else {
-            return refreshedSignal.getValue();
+            return refreshedSignal.getValueAsDouble();
         }
     }
 

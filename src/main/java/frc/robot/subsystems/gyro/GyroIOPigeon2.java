@@ -6,6 +6,8 @@ import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.util.DoubleCircularBuffer;
 import frc.robot.constants.HardwareConstants;
 import frc.robot.subsystems.drive.OdometryThreadRunner;
@@ -15,12 +17,12 @@ public class GyroIOPigeon2 implements GyroIO {
     private final Pigeon2 pigeon;
 
     // Cached StatusSignals
-    private final StatusSignal<Double> yaw;
-    private final StatusSignal<Double> pitch;
-    private final StatusSignal<Double> roll;
-    private final StatusSignal<Double> yawVelocity;
-    private final StatusSignal<Double> pitchVelocity;
-    private final StatusSignal<Double> rollVelocity;
+    private final StatusSignal<Angle> yaw;
+    private final StatusSignal<Angle> pitch;
+    private final StatusSignal<Angle> roll;
+    private final StatusSignal<AngularVelocity> yawVelocity;
+    private final StatusSignal<AngularVelocity> pitchVelocity;
+    private final StatusSignal<AngularVelocity> rollVelocity;
     private final StatusSignal<Boolean> faultHardware;
 
     // StatusSignal buffers for high-freq odometry
@@ -61,9 +63,9 @@ public class GyroIOPigeon2 implements GyroIO {
         inputs.yawPositionDeg = getYaw();
         inputs.pitchPositionDeg = getPitch();
         inputs.rollPositionDeg = getRoll();
-        inputs.yawVelocityDegPerSec = this.yawVelocity.getValue();
-        inputs.pitchVelocityDegPerSec = this.pitchVelocity.getValue();
-        inputs.rollVelocityDegPerSec = this.rollVelocity.getValue();
+        inputs.yawVelocityDegPerSec = this.yawVelocity.getValueAsDouble();
+        inputs.pitchVelocityDegPerSec = this.pitchVelocity.getValueAsDouble();
+        inputs.rollVelocityDegPerSec = this.rollVelocity.getValueAsDouble();
         inputs.hasHardwareFault = this.faultHardware.getValue();
 
         inputs.odometryTimestampsSec = OdometryThreadRunner.writeBufferToArray(timestampBuffer);

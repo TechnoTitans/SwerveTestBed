@@ -1,12 +1,10 @@
 package frc.robot.auto;
 
-import com.choreo.lib.Choreo;
-import com.choreo.lib.ChoreoTrajectory;
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Translation2d;
+import choreo.Choreo;
+import choreo.auto.AutoFactory;
+import choreo.auto.AutoRoutine;
+import choreo.auto.AutoTrajectory;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -16,10 +14,7 @@ import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.vision.PhotonVision;
 import org.littletonrobotics.junction.Logger;
 
-import java.util.List;
 import java.util.Set;
-import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
 
 @SuppressWarnings("DuplicatedCode")
 public class Autos {
@@ -30,6 +25,7 @@ public class Autos {
 
     private final Swerve swerve;
     private final PhotonVision photonVision;
+    private final AutoFactory autoFactory;
 
     public Autos(
             final Swerve swerve,
@@ -37,136 +33,60 @@ public class Autos {
     ) {
         this.swerve = swerve;
         this.photonVision = photonVision;
-    }
 
-    private static class AutoTriggers {
-        private final ChoreoTrajectory trajectory;
-        private final List<ChoreoTrajectory> trajectories;
-        private final Supplier<Pose2d> poseSupplier;
-        private final DoubleSupplier timeSupplier;
-        private final EventLoop eventLoop;
+        this.autoFactory = Choreo.createAutoFactory(
+            swerve::getPose,
+            swerve::followChoreoSample,
+            Robot.IsRedAlliance,
+            swerve,
+            new AutoFactory.AutoBindings(),
+            (trajectory, trajectoryStarting) -> {
+                Logger.recordOutput(
+                    Autos.LogKey + "/Trajectory",
+                    trajectory.getPoses()
+                );
 
-        public AutoTriggers(
-                final ChoreoTrajectory trajectory,
-                final List<ChoreoTrajectory> trajectories,
-                final Supplier<Pose2d> poseSupplier,
-                final DoubleSupplier timeSupplier
-        ) {
-            this.trajectory = trajectory;
-            this.trajectories = trajectories;
-            this.poseSupplier = poseSupplier;
-            this.timeSupplier = timeSupplier;
-            this.eventLoop = new EventLoop();
-        }
-
-        public AutoTriggers(
-                final String trajectoryName,
-                final Supplier<Pose2d> poseSupplier,
-                final DoubleSupplier timeSupplier
-        ) {
-            this(
-                    Choreo.getTrajectory(trajectoryName),
-                    Choreo.getTrajectoryGroup(trajectoryName),
-                    poseSupplier,
-                    timeSupplier
-            );
-        }
-
-        public Trigger autoEnabled() {
-            return new Trigger(eventLoop, DriverStation::isAutonomousEnabled);
-        }
-
-        // TODO: doesn't seem to ever trigger, also, theres probably? a better way to do this check
-        @SuppressWarnings("unused")
-        public Trigger atPlaceAndTime(final double timeSeconds) {
-            final Translation2d place = trajectory
-                    .sample(timeSeconds, Robot.IsRedAlliance.getAsBoolean())
-                    .getPose()
-                    .getTranslation();
-            return new Trigger(
-                    eventLoop,
-                    () -> poseSupplier
-                            .get()
-                            .getTranslation()
-                            .getDistance(place) < TranslationToleranceMeters
-                            && MathUtil.isNear(timeSeconds, timeSupplier.getAsDouble(), TimeToleranceSeconds)
-            );
-        }
-
-        public Trigger atTime(final double timeSeconds) {
-            return new Trigger(
-                    eventLoop,
-                    () -> MathUtil.isNear(timeSeconds, timeSupplier.getAsDouble(), TimeToleranceSeconds)
-            );
-        }
-
-        // TODO: doesn't seem to ever trigger, also, theres probably? a better way to do this check
-        @SuppressWarnings("unused")
-        public Trigger atPlace(final double timeSeconds) {
-            final Translation2d place = trajectory
-                    .sample(timeSeconds, Robot.IsRedAlliance.getAsBoolean())
-                    .getPose()
-                    .getTranslation();
-            return new Trigger(
-                    eventLoop,
-                    () -> poseSupplier
-                            .get()
-                            .getTranslation()
-                            .getDistance(place) < TranslationToleranceMeters
-            );
-        }
-    }
-
-    private Command followPath(final ChoreoTrajectory choreoTrajectory) {
-        return swerve.followChoreoPathCommand(choreoTrajectory, Robot.IsRedAlliance);
-    }
-
-    private Command followPath(final ChoreoTrajectory choreoTrajectory, final Timer timer) {
-        return Commands.parallel(
-                Commands.run(() -> Logger.recordOutput(LogKey + "/FollowTimer", timer.get())),
-                Commands.runOnce(timer::start)
-                        .andThen(followPath(choreoTrajectory))
-                        .finallyDo(timer::stop)
+                Logger.recordOutput(
+                    Autos.LogKey + "/TrajectoryStarting",
+                    trajectoryStarting
+                );
+            }
         );
     }
 
-    private Command resetPose(final ChoreoTrajectory trajectory) {
-        return Commands.defer(() -> photonVision.resetPoseCommand(
-                        Robot.IsRedAlliance.getAsBoolean()
-                                ? trajectory.getFlippedInitialPose()
-                                : trajectory.getInitialPose()
-                ),
+    private Command resetPose(final AutoTrajectory swerveSample) {
+        return Commands.defer(() ->
+                photonVision.resetPoseCommand(swerveSample.getInitialPose().orElse(swerve.getPose())),
                 Set.of()
         );
     }
 
-    public EventLoop doNothing() {
-        final EventLoop doNothingEventLoop = new EventLoop();
-        new Trigger(doNothingEventLoop, DriverStation::isAutonomousEnabled)
-                .whileTrue(Commands.waitUntil(() -> !DriverStation.isAutonomousEnabled()));
+    public AutoRoutine doNothing() {
+        final AutoRoutine routine = autoFactory.newRoutine("DoNothing");
 
-        return doNothingEventLoop;
+        routine.running().whileTrue(
+                Commands.waitUntil(() -> !DriverStation.isAutonomousEnabled())
+        );
+
+        return routine;
     }
 
-    public EventLoop squigleAuto () {
-        final String trajectoryName = "Squigle";
-        final Timer timer = new Timer();
-        final AutoTriggers autoTriggers = new AutoTriggers(trajectoryName, swerve::getPose, timer::get);
+    public AutoRoutine squigleAuto() {
+        final AutoRoutine routine = autoFactory.newRoutine("Squigle");
+        final AutoTrajectory simpleSquigle = routine.trajectory("SimpleSquigle");
 
-        final ChoreoTrajectory trajectory0 = autoTriggers.trajectories.get(0);
-        autoTriggers.autoEnabled().whileTrue(
+        routine.running().whileTrue(
                 Commands.sequence(
-                        resetPose(trajectory0),
-                        Commands.runOnce(timer::reset),
-                        followPath(trajectory0, timer)
+                        resetPose(simpleSquigle),
+                        squigleAuto().cmd()
                 )
         );
 
-        autoTriggers.atTime(0.88).onTrue(
+        simpleSquigle.atTime(0.33).onTrue(
                 Commands.print("REACHED MARKER")
         );
 
-        return autoTriggers.eventLoop;
+        return routine;
     }
 
     public EventLoop followNote() {

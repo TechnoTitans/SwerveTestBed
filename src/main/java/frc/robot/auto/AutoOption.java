@@ -1,5 +1,6 @@
 package frc.robot.auto;
 
+import choreo.auto.AutoRoutine;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import frc.robot.constants.Constants;
 
@@ -10,24 +11,24 @@ import java.util.Set;
 
 public record AutoOption(
         String name,
-        EventLoop autoEventLoop,
+        AutoRoutine autoRoutine,
         Set<Constants.CompetitionType> competitionTypes
 ) {
     public static final List<Constants.CompetitionType> defaultCompetitionTypes =
             List.of(Constants.CompetitionType.TESTING);
 
-    public AutoOption(final String name, final EventLoop autoEventLoop) {
-        this(name, autoEventLoop, new HashSet<>(defaultCompetitionTypes));
+    public AutoOption(final String name, final AutoRoutine autoRoutine) {
+        this(name, autoRoutine, new HashSet<>(defaultCompetitionTypes));
     }
 
     public AutoOption(
             final String name,
-            final EventLoop autoEventLoop,
+            final AutoRoutine autoRoutine,
             final Constants.CompetitionType... competitionTypes
     ) {
         this(
                 name,
-                autoEventLoop,
+                autoRoutine,
                 addDefaultCompetitionType(competitionTypes)
         );
     }

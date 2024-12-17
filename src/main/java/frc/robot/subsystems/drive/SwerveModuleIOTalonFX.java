@@ -13,10 +13,13 @@ import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.AbsoluteSensorRangeValue;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.units.measure.Temperature;
 import edu.wpi.first.util.DoubleCircularBuffer;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
@@ -45,14 +48,14 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
 
     private final OdometryThreadRunner odometryThreadRunner;
     // Cached StatusSignals
-    private final StatusSignal<Double> drivePosition;
-    private final StatusSignal<Double> driveVelocity;
-    private final StatusSignal<Double> driveTorqueCurrent;
-    private final StatusSignal<Double> driveDeviceTemp;
-    private final StatusSignal<Double> turnPosition;
-    private final StatusSignal<Double> turnVelocity;
-    private final StatusSignal<Double> turnTorqueCurrent;
-    private final StatusSignal<Double> turnDeviceTemp;
+    private final StatusSignal<Angle> drivePosition;
+    private final StatusSignal<AngularVelocity> driveVelocity;
+    private final StatusSignal<Current> driveTorqueCurrent;
+    private final StatusSignal<Temperature> driveDeviceTemp;
+    private final StatusSignal<Angle> turnPosition;
+    private final StatusSignal<AngularVelocity> turnVelocity;
+    private final StatusSignal<Current> turnTorqueCurrent;
+    private final StatusSignal<Temperature> turnDeviceTemp;
 
     // Odometry StatusSignal update buffers
     private final DoubleCircularBuffer timestampBuffer;
@@ -98,7 +101,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         // TODO: check StatusCode of some/most of these blocking config calls... maybe retry if failed?
         final CANcoderConfiguration canCoderConfiguration = new CANcoderConfiguration();
         canCoderConfiguration.MagnetSensor.MagnetOffset = -magnetOffset;
-        canCoderConfiguration.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue.Signed_PlusMinusHalf;
+        canCoderConfiguration.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 0.5;
         turnEncoder.getConfigurator().apply(canCoderConfiguration);
 
         // TODO: drive and azimuth gains both need to be re-tuned
@@ -165,14 +168,14 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
         );
 
         inputs.drivePositionRots = getDrivePosition();
-        inputs.driveVelocityRotsPerSec = this.driveVelocity.getValue();
-        inputs.driveTorqueCurrentAmps = this.driveTorqueCurrent.getValue();
-        inputs.driveTempCelsius = this.driveDeviceTemp.getValue();
+        inputs.driveVelocityRotsPerSec = this.driveVelocity.getValueAsDouble();
+        inputs.driveTorqueCurrentAmps = this.driveTorqueCurrent.getValueAsDouble();
+        inputs.driveTempCelsius = this.driveDeviceTemp.getValueAsDouble();
 
         inputs.turnPositionRots = getRawAngle();
-        inputs.turnVelocityRotsPerSec = this.turnVelocity.getValue();
-        inputs.turnTorqueCurrentAmps = this.turnTorqueCurrent.getValue();
-        inputs.turnTempCelsius = this.turnDeviceTemp.getValue();
+        inputs.turnVelocityRotsPerSec = this.turnVelocity.getValueAsDouble();
+        inputs.turnTorqueCurrentAmps = this.turnTorqueCurrent.getValueAsDouble();
+        inputs.turnTempCelsius = this.turnDeviceTemp.getValueAsDouble();
 
         inputs.odometryTimestampsSec = OdometryThreadRunner.writeBufferToArray(timestampBuffer);
         timestampBuffer.clear();
@@ -216,7 +219,7 @@ public class SwerveModuleIOTalonFX implements SwerveModuleIO {
     @Override
     public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
         final double driveVelocityBackOut = (
-                (this.turnVelocity.getValue() * couplingRatio)
+                (this.turnVelocity.getValueAsDouble() * couplingRatio)
                         / driveReduction
         );
         final double backedOutDriveVelocity = desiredDriverVelocity + driveVelocityBackOut;

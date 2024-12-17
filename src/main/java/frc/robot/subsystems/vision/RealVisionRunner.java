@@ -14,6 +14,7 @@ import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.targeting.PhotonPipelineResult;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class RealVisionRunner implements PhotonVisionRunner {
@@ -39,7 +40,8 @@ public class RealVisionRunner implements PhotonVisionRunner {
             inputs.name = cameraName;
             inputs.stdDevFactor = stdDevFactor;
             inputs.robotToCamera = robotToCamera;
-            inputs.latestResult = photonCamera.getLatestResult();
+            final List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
+            inputs.latestResult = results.get(results.size()-1);
         }
     }
 
@@ -60,7 +62,8 @@ public class RealVisionRunner implements PhotonVisionRunner {
             inputs.name = cameraName;
             inputs.stdDevFactor = -1;
             inputs.robotToCamera = robotToCamera;
-            inputs.latestResult = photonCamera.getLatestResult();
+            final List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
+            inputs.latestResult = results.get(results.size()-1);
         }
     }
 
@@ -84,11 +87,9 @@ public class RealVisionRunner implements PhotonVisionRunner {
             final PhotonPoseEstimator photonPoseEstimator = new PhotonPoseEstimator(
                     aprilTagFieldLayout,
                     Constants.Vision.MULTI_TAG_POSE_STRATEGY,
-                    visionIOApriltagReal.photonCamera,
                     visionIOApriltagReal.titanCamera.getRobotToCameraTransform()
             );
             photonPoseEstimator.setMultiTagFallbackStrategy(PhotonPoseEstimator.PoseStrategy.LOWEST_AMBIGUITY);
-
             poseEstimatorMap.put(visionIOApriltagReal, photonPoseEstimator);
         }
 
@@ -119,11 +120,10 @@ public class RealVisionRunner implements PhotonVisionRunner {
                     inputs
             );
 
-            final PhotonPipelineResult result = inputs.latestResult;
-            VisionUtils.correctPipelineResultTimestamp(result);
+            final PhotonPipelineResult pipelineResult = inputs.latestResult;
             VisionUtils.updatePoseEstimator(
                     photonPoseEstimatorMap.get(visionIO),
-                    result
+                    pipelineResult
             ).ifPresent(
                     estimatedRobotPose -> estimatedRobotPoseMap.put(visionIO, estimatedRobotPose)
             );
@@ -145,8 +145,6 @@ public class RealVisionRunner implements PhotonVisionRunner {
             );
 
             final PhotonPipelineResult pipelineResult = inputs.latestResult;
-            VisionUtils.correctPipelineResultTimestamp(pipelineResult);
-
             Logger.recordOutput(
                     String.format("%s/%s/HasTarget", PhotonVision.PhotonLogKey, inputs.name),
                     pipelineResult.hasTargets()

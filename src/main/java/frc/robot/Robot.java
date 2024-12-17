@@ -1,5 +1,6 @@
 package frc.robot;
 
+import choreo.auto.AutoRoutine;
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.event.EventLoop;
@@ -7,6 +8,7 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.auto.AutoChooser;
@@ -24,7 +26,6 @@ import frc.robot.utils.subsystems.VirtualSubsystem;
 import frc.robot.utils.teleop.ControllerUtils;
 import frc.robot.utils.teleop.Profiler;
 import org.littletonrobotics.junction.LogFileUtil;
-import org.littletonrobotics.junction.LogTable;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
@@ -77,15 +78,12 @@ public class Robot extends LoggedRobot {
 
     public final CommandXboxController driverController = new CommandXboxController(RobotMap.MainController);
 
-    private EventLoop autonomousEventLoop;
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
-    private final Trigger autoEnabled = new Trigger(DriverStation::isAutonomousEnabled);
-    private final Trigger teleopEnabled = new Trigger(DriverStation::isTeleopEnabled);
     private final Trigger endgameTrigger = new Trigger(() -> DriverStation.getMatchTime() <= 20)
             .and(DriverStation::isFMSAttached)
-            .and(teleopEnabled);
+            .and(RobotModeTriggers.teleop());
 
     @Override
     public void robotInit() {
@@ -141,13 +139,11 @@ public class Robot extends LoggedRobot {
                 Logger.addDataReceiver(new NT4Publisher());
             }
             case REPLAY -> {
-                // Disable Protobuf log overhead warning in replay
-                LogTable.disableProtobufWarning();
                 setUseTiming(false);
 
                 final String logPath = LogFileUtil.findReplayLog();
                 Logger.setReplaySource(new WPILOGReader(logPath));
-                Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim"), 0.005));
+                Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim"), WPILOGWriter.AdvantageScopeOpenBehavior.AUTO));
             }
         }
 
@@ -189,20 +185,12 @@ public class Robot extends LoggedRobot {
 
     @Override
     public void autonomousInit() {
-        autonomousEventLoop = autoChooser.getSelected().autoEventLoop();
-        autoEnabled.onFalse(Commands.runOnce(() -> {
-            if (autonomousEventLoop != null) {
-                autonomousEventLoop.poll();
-            }
-        }).ignoringDisable(true));
+        final AutoRoutine autonomousRoutine = autoChooser.getSelected().autoRoutine();
+        RobotModeTriggers.autonomous().whileTrue(autonomousRoutine.cmd());
     }
 
     @Override
-    public void autonomousPeriodic() {
-        if (autonomousEventLoop != null) {
-            autonomousEventLoop.poll();
-        }
-    }
+    public void autonomousPeriodic() {}
 
     @Override
     public void teleopInit() {

@@ -5,11 +5,12 @@ import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
+import edu.wpi.first.units.Measure;
 import edu.wpi.first.util.DoubleCircularBuffer;
 import edu.wpi.first.util.struct.Struct;
 import edu.wpi.first.util.struct.StructSerializable;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Threads;
+import edu.wpi.first.wpilibj.RobotController;
 import org.littletonrobotics.junction.Logger;
 
 import java.nio.ByteBuffer;
@@ -33,8 +34,9 @@ public class OdometryThreadRunner {
     protected final ReentrantReadWriteLock controlReqReadWriteLock = new ReentrantReadWriteLock();
 
     private String network;
+    private CANBus canBus;
 
-    protected final List<StatusSignal<Double>> allSignals = new ArrayList<>();
+    protected final List<StatusSignal<?>> allSignals = new ArrayList<>();
     protected final Map<Long, ControlRequest> outerAppliedControlRequests = new HashMap<>();
     protected final Map<Long, ControlRequest> innerAppliedControlRequests = new HashMap<>();
     protected final Map<Long, Consumer<ControlRequest>> controlReqAppliers = new HashMap<>();
@@ -135,8 +137,8 @@ public class OdometryThreadRunner {
             }
 
             @Override
-            public String getTypeString() {
-                return "struct:OdometryThreadRunner.State";
+            public String getTypeName() {
+                return "OdometryThreadRunner.State";
             }
 
             @Override
@@ -206,15 +208,29 @@ public class OdometryThreadRunner {
         return buffer;
     }
 
-    public DoubleCircularBuffer registerSignal(
+    public <T extends Measure<?>> DoubleCircularBuffer registerSignal(
             final ParentDevice device,
-            final StatusSignal<Double> signal
+            final StatusSignal<T> signal
     ) {
         final DoubleCircularBuffer buffer = new DoubleCircularBuffer(20);
         try {
             signalReadWriteLock.writeLock().lock();
             final String deviceNetwork = device.getNetwork();
-            if (!CANBus.isNetworkFD(deviceNetwork)) {
+
+            // Ensure that we cannot register devices on different networks
+            if (network != null && !network.equals(deviceNetwork)) {
+                throw new RuntimeException(String.format(
+                        "Attempted to register signal from a device on a different network than devices already" +
+                                "registered! Current: %s, New: %s! This is a bug!",
+                        network,
+                        deviceNetwork
+                ));
+            } else if (network == null || canBus == null) {
+                network = deviceNetwork;
+                canBus = new CANBus(deviceNetwork);
+            }
+
+            if (!canBus.isNetworkFD()) {
                 DriverStation.reportWarning(String.format(
                         "Attempted to register signal from a non CAN-FD device ID: %d (%s)! This is a bug!",
                         device.getDeviceID(),
@@ -226,18 +242,6 @@ public class OdometryThreadRunner {
 //                        device.getDeviceID(),
 //                        deviceNetwork
 //                ));
-            }
-
-            // Ensure that we cannot register devices on different networks
-            if (network != null && !network.equals(deviceNetwork)) {
-                throw new RuntimeException(String.format(
-                        "Attempted to register signal from a device on a different network than devices already" +
-                                "registered! Current: %s, New: %s! This is a bug!",
-                        network,
-                        deviceNetwork
-                ));
-            } else if (network == null) {
-                network = deviceNetwork;
             }
 
             allSignals.add(signal);
@@ -351,8 +355,8 @@ public class OdometryThreadRunner {
                 int maxQueueSize = 0;
                 for (int i = 0; i < signalCount; i++) {
                     final DoubleCircularBuffer buffer = buffers.get(i);
-                    final StatusSignal<Double> signal = allSignals.get(i);
-                    buffer.addFirst(signal.getValue());
+                    final StatusSignal<?> signal = allSignals.get(i);
+                    buffer.addFirst(signal.getValueAsDouble());
 
                     final int queueSize = buffer.size();
                     if (queueSize > maxQueueSize) {
@@ -362,7 +366,7 @@ public class OdometryThreadRunner {
                     totalLatencySeconds += signal.getTimestamp().getLatency();
                 }
 
-                final double realTimestampSeconds = Logger.getRealTimestamp() / 1e6;
+                final double realTimestampSeconds = RobotController.getFPGATime() / 1e6;
                 final double signalTimestampSeconds = realTimestampSeconds - (totalLatencySeconds / signalCount);
                 for (final DoubleCircularBuffer timestampBuffer : timestampBuffers) {
                     timestampBuffer.addFirst(signalTimestampSeconds);

@@ -84,11 +84,13 @@ public class HolonomicDriveWithPIDController {
                 targetPose.getRotation().getRadians()
         );
 
-        return ChassisSpeeds.fromFieldRelativeSpeeds(
+        final ChassisSpeeds speeds = new ChassisSpeeds(
                 xFeedback,
                 yFeedback,
-                rotationFF + rotationFeedback,
-                currentPose.getRotation()
+                rotationFF + rotationFeedback
         );
+        speeds.toRobotRelativeSpeeds(currentPose.getRotation());
+
+        return speeds;
     }
 }

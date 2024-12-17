@@ -1,5 +1,6 @@
 package frc.robot.utils.control;
 
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.constants.Constants;
 import org.littletonrobotics.junction.Logger;
@@ -22,7 +23,7 @@ public class DeltaTime {
     public DeltaTime(final boolean disableDeterministicTimestamps) {
         this.timer = new Timer();
         this.disableLoggedTimestamps = disableDeterministicTimestamps;
-        this.lastRealFPGASeconds = MICRO_TO_SEC * Logger.getRealTimestamp();
+        this.lastRealFPGASeconds = MICRO_TO_SEC * RobotController.getFPGATime();
     }
 
     /**
@@ -53,7 +54,7 @@ public class DeltaTime {
             return dtSeconds;
         } else {
             final double lastFPGASeconds = lastRealFPGASeconds;
-            final double newRealTimestampSeconds = MICRO_TO_SEC * Logger.getRealTimestamp();
+            final double newRealTimestampSeconds = MICRO_TO_SEC * RobotController.getFPGATime();
 
             lastRealFPGASeconds = newRealTimestampSeconds;
             return newRealTimestampSeconds - lastFPGASeconds;
