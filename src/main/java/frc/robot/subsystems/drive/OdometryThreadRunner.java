@@ -90,7 +90,6 @@ public class OdometryThreadRunner {
 
     /**
      * Stops the odometry thread with a timeout.
-     *
      * @param timeoutMillis The time to wait in milliseconds
      */
     public void stop(final long timeoutMillis) {
@@ -105,7 +104,6 @@ public class OdometryThreadRunner {
     /**
      * Gets a reference to the signal queue {@link ReentrantReadWriteLock} used to lock
      * read/write operations on any signal queue
-     *
      * @return the {@link ReentrantReadWriteLock}
      */
     public ReentrantReadWriteLock getSignalQueueReadWriteLock() {
@@ -114,7 +112,6 @@ public class OdometryThreadRunner {
 
     /**
      * Sets the DAQ thread priority to a real time priority under the specified priority level
-     *
      * @param priority Priority level to set the DAQ thread to. This is a value between 0 and 99,
      *                 with 99 indicating higher priority and 0 indicating lower priority.
      */
@@ -173,7 +170,7 @@ public class OdometryThreadRunner {
 
             @Override
             public void pack(final ByteBuffer bb, final State value) {
-                bb.put((byte) (value.running ? 1 : 0));
+                bb.put((byte)(value.running ? 1 : 0));
                 bb.putInt(value.failedDAQs);
                 bb.putInt(value.statusCode);
                 bb.putInt(value.maxQueueSize);
@@ -186,7 +183,6 @@ public class OdometryThreadRunner {
     /**
      * Gets the current state of the {@link OdometryThreadRunner}, describing failed DAQs,
      * actual (measured) odometry period, etc...
-     *
      * @return the internal {@link State}
      */
     public State getState() {
@@ -317,7 +313,6 @@ public class OdometryThreadRunner {
 
         final BaseStatusSignal[] allSignalsArray = allSignals.toArray(BaseStatusSignal[]::new);
         BaseStatusSignal.setUpdateFrequencyForAll(UPDATE_FREQUENCY_HZ, allSignalsArray);
-        Threads.setCurrentThreadPriority(true, STARTING_THREAD_PRIORITY);
 
         while (running) {
             final int statusCodeValue;
@@ -395,7 +390,6 @@ public class OdometryThreadRunner {
             // This is inherently synchronous, since lastThreadPriority is only written
             // here and threadPriorityToSet is only read here
             if (threadPriorityToSet != lastThreadPriority) {
-                Threads.setCurrentThreadPriority(true, threadPriorityToSet);
                 lastThreadPriority = threadPriorityToSet;
             }
         }
