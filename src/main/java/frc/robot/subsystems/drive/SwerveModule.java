@@ -14,7 +14,7 @@ public class SwerveModule {
     private final String name;
     private final String logKey;
     private final SwerveModuleIO moduleIO;
-//    private final SwerveModuleIOInputsAutoLogged inputs;
+    private final SwerveModuleIOInputsAutoLogged inputs;
 
     private final double wheelCircumferenceMeters = SwerveConstants.Config.wheelCircumferenceMeters();
     private SwerveModulePosition[] odometryPositions;

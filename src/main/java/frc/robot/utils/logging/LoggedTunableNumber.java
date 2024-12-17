@@ -1,6 +1,7 @@
 package frc.robot.utils.logging;
 
 import org.littletonrobotics.junction.networktables.LoggedDashboardNumber;
+import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +13,7 @@ import java.util.Map;
 public class LoggedTunableNumber {
     private static final String tableKey = "TunableNumbers";
 
-    private final LoggedDashboardNumber dashboardNumber;
+    private final LoggedNetworkNumber dashboardNumber;
     private final Map<Integer, Double> lastHasChangedValues = new HashMap<>();
 
     /**
@@ -22,8 +23,8 @@ public class LoggedTunableNumber {
      * @param defaultValue Default value
      */
     public LoggedTunableNumber(String dashboardKey, double defaultValue) {
-        this.dashboardNumber = new LoggedDashboardNumber(
-                tableKey + "/" + dashboardKey,
+        this.dashboardNumber = new LoggedNetworkNumber(
+                tableKey + "/SmartDashboard" + dashboardKey,
                 defaultValue
         );
     }
@@ -34,7 +35,7 @@ public class LoggedTunableNumber {
      * @param dashboardKey Key on dashboard
      */
     public LoggedTunableNumber(String dashboardKey) {
-        this(dashboardKey, 0);
+        this(tableKey + "/SmartDashboard" + dashboardKey, 0);
     }
 
     /**
@@ -61,7 +62,6 @@ public class LoggedTunableNumber {
             lastHasChangedValues.put(id, currentValue);
             return true;
         }
-
         return false;
     }
 }

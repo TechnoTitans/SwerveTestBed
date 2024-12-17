@@ -16,7 +16,7 @@ public class Gyro {
     private final GyroIO gyroIO;
 
     private final HardwareConstants.GyroConstants gyroConstants;
-//    private final GyroIOInputsAutoLogged inputs;
+    private final GyroIOInputsAutoLogged inputs;
     private final boolean isReal;
 
     public Gyro(

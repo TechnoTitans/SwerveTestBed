@@ -32,12 +32,16 @@ public enum TitanCamera {
                                     0.0,
                                     1.0
                             ),
+                            //TODO: We had 5 before, now it wants 8. I just put 0s for them for now
                             VecBuilder.fill( // distort
                                     -0.35148800442491696,
                                     0.16199158054202314,
                                     0.0003847806133909519,
                                     0.000042723769639477994,
-                                    -0.042523738490321664
+                                    -0.042523738490321664,
+                                    0,
+                                    0,
+                                    0
                             )
                     )
                     .withCalibrationError(
@@ -126,7 +130,10 @@ public enum TitanCamera {
                                     0.16199158054202314,
                                     0.0003847806133909519,
                                     0.000042723769639477994,
-                                    -0.042523738490321664
+                                    -0.042523738490321664,
+                                    0,
+                                    0,
+                                    0
                             )
                     )
                     .withCalibrationError(

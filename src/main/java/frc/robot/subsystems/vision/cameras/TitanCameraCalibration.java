@@ -5,6 +5,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.numbers.N5;
+import edu.wpi.first.math.numbers.N8;
 import org.photonvision.simulation.SimCameraProperties;
 
 import java.util.HashMap;
@@ -91,7 +92,7 @@ public class TitanCameraCalibration {
 
     private TitanCameraCalibration withDistortions(
             final CameraProperties.Resolution resolution,
-            final Matrix<N5, N1> distortions
+            final Matrix<N8, N1> distortions
     ) {
         final SimCameraProperties simCameraProperties = getOrMake(resolution);
         simCameraProperties.setCalibration(
@@ -104,7 +105,7 @@ public class TitanCameraCalibration {
     public TitanCameraCalibration withCalibration(
             final CameraProperties.Resolution resolution,
             final Matrix<N3, N3> intrinsics,
-            final Matrix<N5, N1> distortions
+            final Matrix<N8, N1> distortions
     ) {
         withIntrinsics(resolution, intrinsics);
         withDistortions(resolution, distortions);
@@ -157,7 +158,7 @@ public class TitanCameraCalibration {
         return getSimCameraProperties(resolution).getIntrinsics();
     }
 
-    public Matrix<N5, N1> getDistortions(final CameraProperties.Resolution resolution) {
+    public Matrix<N8, N1> getDistortions(final CameraProperties.Resolution resolution) {
         return getSimCameraProperties(resolution).getDistCoeffs();
     }
 }
