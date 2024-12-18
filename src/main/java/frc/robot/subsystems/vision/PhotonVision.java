@@ -8,7 +8,6 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -27,7 +26,6 @@ import org.photonvision.EstimatedRobotPose;
 import org.photonvision.simulation.VisionSystemSim;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
-import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -40,8 +38,8 @@ public class PhotonVision extends VirtualSubsystem {
     public static final double TranslationalVelocityTolerance = 1;
     public static final double AngularVelocityTolerance = 1;
 
-    private final double maxLinearVelocity = SwerveConstants.Config.maxLinearVelocity();
-    private final double maxAngularVelocity = SwerveConstants.Config.maxAngularVelocity();
+    private final double maxLinearVelocity = SwerveConstants.Config.maxLinearVelocityMeterPerSec();
+    private final double maxAngularVelocity = SwerveConstants.Config.maxAngularVelocityRadsPerSec();
 
     public static final AprilTagFieldLayout apriltagFieldLayout;
 
@@ -364,7 +362,7 @@ public class PhotonVision extends VirtualSubsystem {
     @Override
     public void periodic() {
         final double visionIOPeriodicStart = RobotController.getFPGATime();
-        runner.periodic();
+        runner.periodic(swerve.getPose());
 
         // Update and log PhotonVision results
         update();

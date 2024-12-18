@@ -29,30 +29,40 @@ public class LogUtils {
         return interruptingRequirementsList.toArray(new String[0]);
     }
 
-    public static void serializePhotonPipelineResult(
+    public static void serializePhotonPipelineResults(
             final LogTable logTable,
             final String prefix,
-            final PhotonPipelineResult photonPipelineResult
+            final PhotonPipelineResult[] photonPipelineResults
     ) {
-        if (photonPipelineResult == null) {
+        if (photonPipelineResults == null || photonPipelineResults.length == 0) {
             logTable.put(prefix + "/IsPresent", false);
             return;
         } else {
-            logTable.put(prefix + "/IsPresent", false);
+            logTable.put(prefix + "/IsPresent", true);
         }
 
-        final Packet packet = new Packet(photonPipelineResult.getPacketSize());
-        photonPipelineResult.getSerde().pack(packet, photonPipelineResult);
-        LogUtils.serializePhotonVisionPacket(logTable, prefix + "/Packet", packet);
+        final int nResults = photonPipelineResults.length;
+        logTable.put(prefix + "/Size", nResults);
+        for (int i = 0; i < nResults; i++) {
+            final PhotonPipelineResult photonPipelineResult = photonPipelineResults[i];
+            final Packet packet = new Packet(photonPipelineResult.getPacketSize());
+            photonPipelineResult.getSerde().pack(packet, photonPipelineResult);
+            LogUtils.serializePhotonVisionPacket(logTable, prefix + "/Packets/" + i, packet);
+        }
     }
 
-    public static PhotonPipelineResult deserializePhotonPipelineResult(final LogTable logTable, final String prefix) {
-        if (logTable.get(prefix + "/IsPresent", false)) {
+    public static PhotonPipelineResult[] deserializePhotonPipelineResults(final LogTable logTable, final String prefix) {
+        if (!logTable.get(prefix + "/IsPresent", false)) {
             return null;
         }
 
-        final Packet packet = LogUtils.deserializePhotonVisionPacket(logTable, prefix + "/Packet");
-        return new PhotonPipelineResult().getSerde().unpack(packet);
+        final int nResults = logTable.get(prefix + "/Size", 0);
+        final PhotonPipelineResult[] photonPipelineResults = new PhotonPipelineResult[nResults];
+        for (int i = 0; i < nResults; i++) {
+            final Packet packet = LogUtils.deserializePhotonVisionPacket(logTable, prefix + "/Packets/" + i);
+            photonPipelineResults[i] = new PhotonPipelineResult().getSerde().unpack(packet);
+        }
+        return photonPipelineResults;
     }
 
     public static void serializePhotonVisionPacket(final LogTable logTable, final String prefix, final Packet packet) {

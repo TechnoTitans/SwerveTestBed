@@ -1,6 +1,7 @@
 package frc.robot.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import frc.robot.constants.Constants;
 import frc.robot.subsystems.vision.cameras.TitanCamera;
@@ -50,7 +51,7 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
                     Constants.Vision.MULTI_TAG_POSE_STRATEGY,
                     visionIOApriltagsReplay.titanCamera.getRobotToCameraTransform()
             );
-            photonPoseEstimator.setMultiTagFallbackStrategy(PhotonPoseEstimator.PoseStrategy.LOWEST_AMBIGUITY);
+            photonPoseEstimator.setMultiTagFallbackStrategy(Constants.Vision.FALLBACK_POSE_STRATEGY);
 
             poseEstimatorMap.put(visionIOApriltagsReplay, photonPoseEstimator);
             visionIONames.put(visionIOApriltagsReplay, visionIOApriltagsReplay.photonCamera.getName());
@@ -68,7 +69,7 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
 
     @SuppressWarnings("DuplicatedCode")
     @Override
-    public void periodic() {
+    public void periodic(final Pose2d currentRobotPose) {
         if (ToClose.hasClosed()) {
             return;
         }
@@ -88,13 +89,14 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
                     inputs
             );
 
-            final PhotonPipelineResult result = inputs.latestResult;
-            VisionUtils.updatePoseEstimator(
-                    photonPoseEstimatorMap.get(visionIO),
-                    result
-            ).ifPresent(
-                    estimatedRobotPose -> estimatedRobotPoseMap.put(visionIO, estimatedRobotPose)
-            );
+            final PhotonPipelineResult[] pipelineResults = inputs.pipelineResults;
+            for (final PhotonPipelineResult result : pipelineResults) {
+                final PhotonPoseEstimator photonPoseEstimator = photonPoseEstimatorMap.get(visionIO);
+                photonPoseEstimator.setReferencePose(currentRobotPose);
+                photonPoseEstimator.update(result).ifPresent(
+                        estimatedRobotPose -> estimatedRobotPoseMap.put(visionIO, estimatedRobotPose)
+                );
+            }
         }
 
         for (
@@ -112,7 +114,8 @@ public class ReplayVisionRunner implements PhotonVisionRunner {
                     inputs
             );
 
-            final PhotonPipelineResult pipelineResult = inputs.latestResult;
+            final PhotonPipelineResult[] pipelineResults = inputs.pipelineResults;
+            final PhotonPipelineResult pipelineResult = pipelineResults[pipelineResults.length - 1];
             Logger.recordOutput(
                     String.format("%s/%s/HasTarget", PhotonVision.PhotonLogKey, visionIONames.get(visionIO)),
                     pipelineResult.hasTargets()

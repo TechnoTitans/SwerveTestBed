@@ -1,6 +1,5 @@
 package frc.robot.utils.logging;
 
-import org.littletonrobotics.junction.networktables.LoggedDashboardNumber;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 import java.util.HashMap;

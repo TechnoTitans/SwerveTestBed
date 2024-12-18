@@ -12,14 +12,14 @@ public interface VisionIO {
         public String name = "";
         public double stdDevFactor = 1.0;
         public Transform3d robotToCamera;
-        public PhotonPipelineResult latestResult;
+        public PhotonPipelineResult[] pipelineResults;
 
         @Override
         public void toLog(final LogTable table) {
             table.put("Name", name);
             table.put("StdDevFactor", stdDevFactor);
             table.put("RobotToCamera", robotToCamera);
-            LogUtils.serializePhotonPipelineResult(table, "LatestResult", latestResult);
+            LogUtils.serializePhotonPipelineResults(table, "LatestResult", pipelineResults);
         }
 
         @Override
@@ -27,7 +27,7 @@ public interface VisionIO {
             this.name = table.get("Name", "unknown");
             this.stdDevFactor = table.get("StdDevFactor", Constants.Vision.VISION_CAMERA_DEFAULT_STD_DEV_FACTOR);
             this.robotToCamera = table.get("RobotToCamera", new Transform3d());
-            this.latestResult = LogUtils.deserializePhotonPipelineResult(table, "LatestResult");
+            this.pipelineResults = LogUtils.deserializePhotonPipelineResults(table, "LatestResult");
         }
     }
 

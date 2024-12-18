@@ -41,13 +41,11 @@ public class HolonomicChoreoController {
         double rotationFeedback =
                 rotationController.calculate(pose.getRotation().getRadians(), swerveSample.heading);
 
-        final ChassisSpeeds speeds = new ChassisSpeeds(
+        return ChassisSpeeds.fromFieldRelativeSpeeds(
                 xFF + xFeedback,
                 yFF + yFeedback,
-                rotationFF + rotationFeedback
+                rotationFeedback,
+                pose.getRotation()
         );
-        speeds.toFieldRelativeSpeeds(pose.getRotation());
-
-        return speeds;
     }
 }

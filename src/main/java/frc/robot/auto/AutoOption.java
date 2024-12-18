@@ -1,7 +1,6 @@
 package frc.robot.auto;
 
 import choreo.auto.AutoRoutine;
-import edu.wpi.first.wpilibj.event.EventLoop;
 import frc.robot.constants.Constants;
 
 import java.util.Arrays;

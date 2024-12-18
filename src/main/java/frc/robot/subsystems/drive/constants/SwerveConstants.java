@@ -69,10 +69,10 @@ public class SwerveConstants {
             double couplingRatio,
             double wheelBaseMeters,
             double trackWidthMeters,
-            double maxLinearVelocity,
-            double maxLinearAcceleration,
-            double maxAngularVelocity,
-            double maxAngularAcceleration,
+            double maxLinearVelocityMeterPerSec,
+            double maxLinearAccelerationMetersPerSecSquared,
+            double maxAngularVelocityRadsPerSec,
+            double maxAngularAccelerationRadsPerSecSquared,
             Translation2d centerOfRotationMeters
     ) {
         public double driveBaseRadiusMeters() {

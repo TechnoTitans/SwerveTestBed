@@ -66,8 +66,7 @@ public class Swerve extends SubsystemBase {
     private final OdometryThreadRunner odometryThreadRunner;
     private final ReentrantReadWriteLock signalQueueReadWriteLock = new ReentrantReadWriteLock();
 
-    private final double maxLinearVelocity = Config.maxLinearVelocity();
-    private final double maxAngularVelocity = Config.maxAngularVelocity();
+    private final double maxLinearVelocity = Config.maxLinearVelocityMeterPerSec();
 
     public final Trigger atHeadingSetpoint;
     private boolean headingControllerActive = false;
@@ -145,8 +144,8 @@ public class Swerve extends SubsystemBase {
                 new ProfiledPIDController(
                         headingController.getP(), headingController.getI(), headingController.getD(),
                         new TrapezoidProfile.Constraints(
-                                Config.maxAngularVelocity() * 0.95,
-                                Config.maxAngularAcceleration() * 0.75
+                                Config.maxAngularVelocityRadsPerSec() * 0.95,
+                                Config.maxAngularAccelerationRadsPerSecSquared() * 0.75
                         )
                 ),
                 new Pose2d(0.05, 0.05, Rotation2d.fromDegrees(6))
@@ -346,9 +345,7 @@ public class Swerve extends SubsystemBase {
     }
 
     public void zeroRotation() {
-        poseEstimator.resetPosition(
-                gyro.getYawRotation2d(),
-                getModulePositions(),
+        resetPose(
                 new Pose2d(
                         getPose().getTranslation(),
                         Robot.IsRedAlliance.getAsBoolean()
@@ -358,12 +355,12 @@ public class Swerve extends SubsystemBase {
         );
     }
 
-    public Command zeroRotationCommand() {
-        return runOnce(this::zeroRotation);
-    }
-
     private void resetPose(final Pose2d robotPose) {
         poseEstimator.resetPosition(gyro.getYawRotation2d(), getModulePositions(), robotPose);
+    }
+
+    public Command zeroRotationCommand() {
+        return runOnce(this::zeroRotation);
     }
 
     public ChassisSpeeds getRobotRelativeSpeeds() {
@@ -376,9 +373,7 @@ public class Swerve extends SubsystemBase {
     }
 
     public ChassisSpeeds getFieldRelativeSpeeds() {
-        final ChassisSpeeds currentRobotRelativeSpeeds = getRobotRelativeSpeeds();
-        currentRobotRelativeSpeeds.toFieldRelativeSpeeds(getYaw());
-        return currentRobotRelativeSpeeds;
+        return ChassisSpeeds.fromRobotRelativeSpeeds(getRobotRelativeSpeeds(), getYaw());
     }
 
     public SwerveModuleState[] getModuleStates() {
@@ -424,14 +419,19 @@ public class Swerve extends SubsystemBase {
             final boolean fieldRelative,
             final boolean invertYaw
     ) {
-        final ChassisSpeeds speeds = new ChassisSpeeds(xSpeedMeterPerSec, ySpeedMetersPerSec, omegaRadsPerSec);
+        final ChassisSpeeds speeds;
         if (fieldRelative) {
             final Rotation2d poseYaw = getYaw();
-            speeds.toRobotRelativeSpeeds(
+            speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                    xSpeedMeterPerSec,
+                    ySpeedMetersPerSec,
+                    omegaRadsPerSec,
                     invertYaw
                             ? poseYaw.plus(Rotation2d.fromRadians(Math.PI))
                             : poseYaw
             );
+        } else {
+            speeds = new ChassisSpeeds(xSpeedMeterPerSec, ySpeedMetersPerSec, omegaRadsPerSec);
         }
 
         drive(speeds);
@@ -444,8 +444,10 @@ public class Swerve extends SubsystemBase {
 
         SwerveDriveKinematics.desaturateWheelSpeeds(moduleStates, maxLinearVelocity);
 
-        final ChassisSpeeds correctedSpeeds = kinematics.toChassisSpeeds(moduleStates);
-        correctedSpeeds.discretize(Constants.LOOP_PERIOD_SECONDS);
+        final ChassisSpeeds correctedSpeeds = ChassisSpeeds.discretize(
+                kinematics.toChassisSpeeds(moduleStates),
+                Constants.LOOP_PERIOD_SECONDS
+        );
 
         drive(kinematics.toSwerveModuleStates(correctedSpeeds));
     }
@@ -672,13 +674,13 @@ public class Swerve extends SubsystemBase {
         Logger.recordOutput(Autos.LogKey + "/TargetPose", swerveSample.getPose());
 
         Logger.recordOutput(
-            Autos.LogKey + "/TargetRotation",
-            MathUtil.angleModulus(swerveSample.heading)
+                Autos.LogKey + "/TargetRotation",
+                MathUtil.angleModulus(swerveSample.heading)
         );
 
         Logger.recordOutput(
-            Autos.LogKey + "/CurrentRotation",
-            MathUtil.angleModulus(currentPose.getRotation().getRadians())
+                Autos.LogKey + "/CurrentRotation",
+                MathUtil.angleModulus(currentPose.getRotation().getRadians())
         );
 
         drive(speeds);

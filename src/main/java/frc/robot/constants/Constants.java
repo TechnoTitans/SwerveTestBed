@@ -36,6 +36,9 @@ public interface Constants {
         PhotonPoseEstimator.PoseStrategy MULTI_TAG_POSE_STRATEGY =
                 PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR;
 
+        PhotonPoseEstimator.PoseStrategy FALLBACK_POSE_STRATEGY =
+                PhotonPoseEstimator.PoseStrategy.CLOSEST_TO_REFERENCE_POSE;
+
         Transform3d ROBOT_TO_FL_APRILTAG = new Transform3d(
                 new Translation3d(Units.inchesToMeters(11.862), Units.inchesToMeters(12.681), Units.inchesToMeters(8.947)),
                 new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(20))

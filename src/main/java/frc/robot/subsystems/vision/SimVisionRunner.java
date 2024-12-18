@@ -22,10 +22,8 @@ import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.VisionSystemSim;
 import org.photonvision.simulation.VisionTargetSim;
 import org.photonvision.targeting.PhotonPipelineResult;
-import org.photonvision.targeting.PhotonTrackedTarget;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class SimVisionRunner implements PhotonVisionRunner {
@@ -64,8 +62,7 @@ public class SimVisionRunner implements PhotonVisionRunner {
             inputs.name = cameraName;
             inputs.stdDevFactor = stdDevFactor;
             inputs.robotToCamera = robotToCamera;
-            final List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
-            inputs.latestResult = results.get(results.size()-1);
+            inputs.pipelineResults = photonCamera.getAllUnreadResults().toArray(new PhotonPipelineResult[0]);
         }
     }
 
@@ -102,8 +99,7 @@ public class SimVisionRunner implements PhotonVisionRunner {
             inputs.name = cameraName;
             inputs.stdDevFactor = -1;
             inputs.robotToCamera = robotToCamera;
-            final List<PhotonPipelineResult> results = photonCamera.getAllUnreadResults();
-            inputs.latestResult = results.get(results.size()-1);
+            inputs.pipelineResults = photonCamera.getAllUnreadResults().toArray(new PhotonPipelineResult[0]);
         }
     }
 
@@ -148,7 +144,7 @@ public class SimVisionRunner implements PhotonVisionRunner {
                     Constants.Vision.MULTI_TAG_POSE_STRATEGY,
                     visionIOApriltagsSim.titanCamera.getRobotToCameraTransform()
             );
-            photonPoseEstimator.setMultiTagFallbackStrategy(PhotonPoseEstimator.PoseStrategy.LOWEST_AMBIGUITY);
+            photonPoseEstimator.setMultiTagFallbackStrategy(Constants.Vision.FALLBACK_POSE_STRATEGY);
 
             poseEstimatorMap.put(visionIOApriltagsSim, photonPoseEstimator);
         }
@@ -160,7 +156,7 @@ public class SimVisionRunner implements PhotonVisionRunner {
 
     @SuppressWarnings("DuplicatedCode")
     @Override
-    public void periodic() {
+    public void periodic(final Pose2d currentRobotPose) {
         if (ToClose.hasClosed()) {
             return;
         }
@@ -194,13 +190,14 @@ public class SimVisionRunner implements PhotonVisionRunner {
                     inputs
             );
 
-            final PhotonPipelineResult result = inputs.latestResult;
-            VisionUtils.updatePoseEstimator(
-                    photonPoseEstimatorMap.get(visionIO),
-                    result
-            ).ifPresent(
-                    estimatedRobotPose -> estimatedRobotPoseMap.put(visionIO, estimatedRobotPose)
-            );
+            final PhotonPipelineResult[] pipelineResults = inputs.pipelineResults;
+            for (final PhotonPipelineResult result : pipelineResults) {
+                final PhotonPoseEstimator photonPoseEstimator = photonPoseEstimatorMap.get(visionIO);
+                photonPoseEstimator.setReferencePose(currentRobotPose);
+                photonPoseEstimator.update(result).ifPresent(
+                        estimatedRobotPose -> estimatedRobotPoseMap.put(visionIO, estimatedRobotPose)
+                );
+            }
         }
 
         for (
@@ -218,7 +215,8 @@ public class SimVisionRunner implements PhotonVisionRunner {
                     inputs
             );
 
-            final PhotonPipelineResult pipelineResult = inputs.latestResult;
+            final PhotonPipelineResult[] pipelineResults = inputs.pipelineResults;
+            final PhotonPipelineResult pipelineResult = pipelineResults[pipelineResults.length - 1];
             Logger.recordOutput(
                     String.format("%s/%s/HasTarget", PhotonVision.PhotonLogKey, inputs.name),
                     pipelineResult.hasTargets()
