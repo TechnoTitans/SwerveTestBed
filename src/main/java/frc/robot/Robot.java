@@ -62,7 +62,7 @@ public class Robot extends LoggedRobot {
     );
 
     public final PhotonVision photonVision = new PhotonVision(
-            Constants.RobotMode.DISABLED,
+            Constants.CURRENT_MODE,
             swerve,
             swerve.getPoseEstimator()
     );
@@ -77,10 +77,15 @@ public class Robot extends LoggedRobot {
     );
 
     public final CommandXboxController driverController = new CommandXboxController(RobotMap.MainController);
+    public final Alert driverControllerDisconnected = new Alert(
+            "Driver controller not connected!",
+            Alert.AlertType.kWarning
+    );
 
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
+    private final Trigger autonomousEnabled = RobotModeTriggers.autonomous();
     private final Trigger endgameTrigger = new Trigger(() -> DriverStation.getMatchTime() <= 20)
             .and(DriverStation::isFMSAttached)
             .and(RobotModeTriggers.teleop());
@@ -180,14 +185,13 @@ public class Robot extends LoggedRobot {
         Threads.setCurrentThreadPriority(true, 99);
         CommandScheduler.getInstance().run();
         VirtualSubsystem.run();
+
+        driverControllerDisconnected.set(!driverController.getHID().isConnected());
         Threads.setCurrentThreadPriority(true, 10);
     }
 
     @Override
-    public void autonomousInit() {
-        final AutoRoutine autonomousRoutine = autoChooser.getSelected().autoRoutine();
-        RobotModeTriggers.autonomous().whileTrue(autonomousRoutine.cmd());
-    }
+    public void autonomousInit() {}
 
     @Override
     public void autonomousPeriodic() {}
@@ -226,10 +230,14 @@ public class Robot extends LoggedRobot {
 
     public void configureAutos() {
         autoChooser.addAutoOption(new AutoOption(
-                "Squigle",
-                autos.squigleAuto(),
+                "Squiggle",
+                autos.squiggleAuto(),
                 Constants.CompetitionType.COMPETITION
         ));
+
+        autonomousEnabled.whileTrue(
+                Commands.defer(() -> autoChooser.getSelected().autoRoutine().cmd().asProxy(), Set.of())
+        );
     }
 
     public void configureButtonBindings(final EventLoop teleopEventLoop) {

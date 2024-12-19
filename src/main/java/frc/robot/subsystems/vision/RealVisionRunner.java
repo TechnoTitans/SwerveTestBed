@@ -4,14 +4,13 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
-import frc.robot.constants.Constants;
 import frc.robot.subsystems.vision.cameras.TitanCamera;
+import frc.robot.subsystems.vision.estimator.VisionPoseEstimator;
+import frc.robot.subsystems.vision.estimator.VisionUpdate;
 import frc.robot.subsystems.vision.result.NoteTrackingResult;
 import frc.robot.utils.closeables.ToClose;
 import org.littletonrobotics.junction.Logger;
-import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
-import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.targeting.PhotonPipelineResult;
 
 import java.util.HashMap;
@@ -19,7 +18,6 @@ import java.util.Map;
 
 public class RealVisionRunner implements PhotonVisionRunner {
     public static class VisionIOApriltagReal implements VisionIO {
-        private final TitanCamera titanCamera;
         private final PhotonCamera photonCamera;
         private final String cameraName;
 
@@ -27,7 +25,6 @@ public class RealVisionRunner implements PhotonVisionRunner {
         private final Transform3d robotToCamera;
 
         public VisionIOApriltagReal(final TitanCamera titanCamera) {
-            this.titanCamera = titanCamera;
             this.photonCamera = titanCamera.getPhotonCamera();
             this.cameraName = photonCamera.getName();
 
@@ -65,11 +62,12 @@ public class RealVisionRunner implements PhotonVisionRunner {
         }
     }
 
+    private final AprilTagFieldLayout aprilTagFieldLayout;
+
     private final Map<VisionIOApriltagReal, VisionIO.VisionIOInputs> apriltagVisionIOInputsMap;
     private final Map<VisionIONoteTrackingReal, VisionIO.VisionIOInputs> noteTrackingVisionIOInputsMap;
-    private final Map<VisionIOApriltagReal, PhotonPoseEstimator> photonPoseEstimatorMap;
 
-    private final Map<VisionIO, EstimatedRobotPose> estimatedRobotPoseMap;
+    private final Map<VisionIO, VisionUpdate> visionUpdates;
     private final Map<VisionIO, NoteTrackingResult> noteTrackingResultMap;
 
     public RealVisionRunner(
@@ -77,22 +75,12 @@ public class RealVisionRunner implements PhotonVisionRunner {
             final Map<VisionIOApriltagReal, VisionIO.VisionIOInputs> apriltagVisionIOInputsMap,
             final Map<VisionIONoteTrackingReal, VisionIO.VisionIOInputs> noteTrackingVisionIOInputsMap
     ) {
+        this.aprilTagFieldLayout = aprilTagFieldLayout;
+
         this.apriltagVisionIOInputsMap = apriltagVisionIOInputsMap;
         this.noteTrackingVisionIOInputsMap = noteTrackingVisionIOInputsMap;
 
-        final Map<VisionIOApriltagReal, PhotonPoseEstimator> poseEstimatorMap = new HashMap<>();
-        for (final VisionIOApriltagReal visionIOApriltagReal : apriltagVisionIOInputsMap.keySet()) {
-            final PhotonPoseEstimator photonPoseEstimator = new PhotonPoseEstimator(
-                    aprilTagFieldLayout,
-                    Constants.Vision.MULTI_TAG_POSE_STRATEGY,
-                    visionIOApriltagReal.titanCamera.getRobotToCameraTransform()
-            );
-            photonPoseEstimator.setMultiTagFallbackStrategy(Constants.Vision.FALLBACK_POSE_STRATEGY);
-            poseEstimatorMap.put(visionIOApriltagReal, photonPoseEstimator);
-        }
-
-        this.photonPoseEstimatorMap = poseEstimatorMap;
-        this.estimatedRobotPoseMap = new HashMap<>();
+        this.visionUpdates = new HashMap<>();
         this.noteTrackingResultMap = new HashMap<>();
     }
 
@@ -120,10 +108,13 @@ public class RealVisionRunner implements PhotonVisionRunner {
 
             final PhotonPipelineResult[] pipelineResults = inputs.pipelineResults;
             for (final PhotonPipelineResult result : pipelineResults) {
-                final PhotonPoseEstimator photonPoseEstimator = photonPoseEstimatorMap.get(visionIO);
-                photonPoseEstimator.setReferencePose(currentRobotPose);
-                photonPoseEstimator.update(result).ifPresent(
-                        estimatedRobotPose -> estimatedRobotPoseMap.put(visionIO, estimatedRobotPose)
+                VisionPoseEstimator.update(
+                        aprilTagFieldLayout,
+                        currentRobotPose,
+                        visionIO.robotToCamera,
+                        result
+                ).ifPresent(
+                        visionUpdate -> visionUpdates.put(visionIO, visionUpdate)
                 );
             }
         }
@@ -174,8 +165,8 @@ public class RealVisionRunner implements PhotonVisionRunner {
     }
 
     @Override
-    public EstimatedRobotPose getEstimatedRobotPose(final VisionIO visionIO) {
-        return estimatedRobotPoseMap.get(visionIO);
+    public VisionUpdate getVisionUpdate(final VisionIO visionIO) {
+        return visionUpdates.get(visionIO);
     }
 
     @Override

@@ -2,8 +2,8 @@ package frc.robot.subsystems.vision;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import frc.robot.subsystems.vision.estimator.VisionUpdate;
 import frc.robot.subsystems.vision.result.NoteTrackingResult;
-import org.photonvision.EstimatedRobotPose;
 
 import java.util.Map;
 
@@ -19,7 +19,7 @@ public interface PhotonVisionRunner {
         return Map.of();
     }
 
-    default EstimatedRobotPose getEstimatedRobotPose(final VisionIO visionIO) {
+    default VisionUpdate getVisionUpdate(final VisionIO visionIO) {
         return null;
     }
 

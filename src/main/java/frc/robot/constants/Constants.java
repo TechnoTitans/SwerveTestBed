@@ -33,12 +33,6 @@ public interface Constants {
     }
 
     interface Vision {
-        PhotonPoseEstimator.PoseStrategy MULTI_TAG_POSE_STRATEGY =
-                PhotonPoseEstimator.PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR;
-
-        PhotonPoseEstimator.PoseStrategy FALLBACK_POSE_STRATEGY =
-                PhotonPoseEstimator.PoseStrategy.CLOSEST_TO_REFERENCE_POSE;
-
         Transform3d ROBOT_TO_FL_APRILTAG = new Transform3d(
                 new Translation3d(Units.inchesToMeters(11.862), Units.inchesToMeters(12.681), Units.inchesToMeters(8.947)),
                 new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(20))
@@ -64,7 +58,6 @@ public interface Constants {
         Vector<N3> STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, Units.degreesToRadians(1));
         double VISION_CAMERA_DEFAULT_STD_DEV_FACTOR = 1.0;
         Vector<N3> VISION_STD_DEV_COEFFS = VecBuilder.fill(0.02, 0.02, 0.02);
-        double MULTI_TAG_MAX_AMBIGUITY = 0.4;
-        double SINGLE_TAG_MAX_AMBIGUITY = 0.2;
+        double MAX_ACCEPT_BEST_POSE_AMBIGUITY = 0.15;
     }
 }

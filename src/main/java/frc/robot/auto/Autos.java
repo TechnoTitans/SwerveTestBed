@@ -1,6 +1,5 @@
 package frc.robot.auto;
 
-import choreo.Choreo;
 import choreo.auto.AutoFactory;
 import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
@@ -34,10 +33,11 @@ public class Autos {
         this.swerve = swerve;
         this.photonVision = photonVision;
 
-        this.autoFactory = Choreo.createAutoFactory(
+        this.autoFactory = new AutoFactory(
             swerve::getPose,
+            photonVision::resetPosition,
             swerve::followChoreoSample,
-            Robot.IsRedAlliance,
+            Robot.IsRedAlliance.getAsBoolean(),
             swerve,
             new AutoFactory.AutoBindings(),
             (trajectory, trajectoryStarting) -> {
@@ -64,25 +64,25 @@ public class Autos {
     public AutoRoutine doNothing() {
         final AutoRoutine routine = autoFactory.newRoutine("DoNothing");
 
-        routine.running().whileTrue(
+        routine.active().whileTrue(
                 Commands.waitUntil(() -> !DriverStation.isAutonomousEnabled())
         );
 
         return routine;
     }
 
-    public AutoRoutine squigleAuto() {
-        final AutoRoutine routine = autoFactory.newRoutine("Squigle");
-        final AutoTrajectory simpleSquigle = routine.trajectory("SimpleSquigle");
+    public AutoRoutine squiggleAuto() {
+        final AutoRoutine routine = autoFactory.newRoutine("Squiggle");
+        final AutoTrajectory simpleSquiggle = routine.trajectory("SimpleSquiggle");
 
-        routine.running().whileTrue(
+        routine.active().whileTrue(
                 Commands.sequence(
-                        resetPose(simpleSquigle),
-                        squigleAuto().cmd()
+                        routine.resetOdometry(simpleSquiggle),
+                        simpleSquiggle.cmd()
                 )
         );
 
-        simpleSquigle.atTime(0.33).onTrue(
+        simpleSquiggle.atTime(0.33).onTrue(
                 Commands.print("REACHED MARKER")
         );
 

@@ -45,7 +45,7 @@ public class LogUtils {
         logTable.put(prefix + "/Size", nResults);
         for (int i = 0; i < nResults; i++) {
             final PhotonPipelineResult photonPipelineResult = photonPipelineResults[i];
-            final Packet packet = new Packet(photonPipelineResult.getPacketSize());
+            final Packet packet = new Packet(1024);
             photonPipelineResult.getSerde().pack(packet, photonPipelineResult);
             LogUtils.serializePhotonVisionPacket(logTable, prefix + "/Packets/" + i, packet);
         }

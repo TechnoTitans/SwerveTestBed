@@ -40,7 +40,13 @@ public class ControllerUtils {
             final double deadband
     ) {
         final double magnitude = MathUtil.applyDeadband(Math.hypot(xInput, yInput), deadband);
-        final Rotation2d direction = new Rotation2d(xInput, yInput);
+
+        final Rotation2d direction;
+        if (MathUtil.isNear(0, xInput, 1e-6) && MathUtil.isNear(0, yInput, 1e-6)) {
+            direction = new Rotation2d(0);
+        } else {
+             direction = new Rotation2d(xInput, yInput);
+        }
 
         final double squaredMagnitude = Math.copySign(magnitude * magnitude, magnitude);
         return new Pose2d(new Translation2d(), direction)
