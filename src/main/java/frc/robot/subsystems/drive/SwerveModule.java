@@ -11,6 +11,7 @@ import frc.robot.utils.logging.LogUtils;
 import org.littletonrobotics.junction.Logger;
 
 public class SwerveModule {
+    private final SwerveConstants.SwerveModuleConstants constants;
     private final String name;
     private final String logKey;
     private final SwerveModuleIO moduleIO;
@@ -19,12 +20,14 @@ public class SwerveModule {
     private final double wheelCircumferenceMeters = SwerveConstants.Config.wheelCircumferenceMeters();
     private SwerveModulePosition[] odometryPositions;
     private SwerveModuleState lastDesiredState = new SwerveModuleState();
+    private SwerveModuleState lastTorqueFeedforwardState = new SwerveModuleState();
 
     public SwerveModule(
             final SwerveConstants.SwerveModuleConstants constants,
             final OdometryThreadRunner odometryThreadRunner,
             final Constants.RobotMode robotMode
     ) {
+        this.constants = constants;
         this.name = constants.name();
         this.logKey = String.format("%s/Modules/%s", Swerve.LogKey, name);
 
@@ -62,6 +65,8 @@ public class SwerveModule {
 
         Logger.recordOutput(logKey + "/CurrentState", getState());
         Logger.recordOutput(logKey + "/LastDesiredState", lastDesiredState);
+        Logger.recordOutput(logKey + "/LastTorqueFeedforward", lastTorqueFeedforwardState);
+
         Logger.recordOutput(
                 logKey + "/DriveDesiredVelocityRotsPerSec",
                 computeDesiredDriverVelocity(
@@ -220,21 +225,26 @@ public class SwerveModule {
      * Sets the desired {@link SwerveModuleState} of the module
      *
      * @param state the desired {@link SwerveModuleState}
+     * @param torqueFeedforwardNm the desired torque feedforward in Nm
      * @see SwerveModuleState
      */
-    public void setDesiredState(final SwerveModuleState state) {
+    public void setDesiredState(final SwerveModuleState state, final SwerveModuleState torqueFeedforwardNm) {
         final Rotation2d currentWheelRotation = getAngle();
+        final double wheelTorqueNm = torqueFeedforwardNm.speedMetersPerSecond;
+        final double wheelTorqueAmps = wheelTorqueNm / constants.driveMotorKtNmPerAmp();
 
         state.optimize(currentWheelRotation);
         final double desiredDriverVelocity = computeDesiredDriverVelocity(state, currentWheelRotation);
         final double desiredTurnerRotations = computeDesiredTurnerRotations(state);
 
+        moduleIO.setInputs(desiredDriverVelocity, desiredTurnerRotations, wheelTorqueAmps);
+
         this.lastDesiredState = state;
-        moduleIO.setInputs(desiredDriverVelocity, desiredTurnerRotations);
+        this.lastTorqueFeedforwardState = torqueFeedforwardNm;
     }
 
     /**
-     * Gets the last desired {@link SwerveModuleState} set in {@link SwerveModule#setDesiredState(SwerveModuleState)}
+     * Gets the last desired {@link SwerveModuleState} set in {@link SwerveModule#setDesiredState(SwerveModuleState, SwerveModuleState)}
      * <p>
      * Note: this {@link SwerveModuleState} has been optimized and does not guarantee that it matches the last set state
      *
@@ -243,6 +253,11 @@ public class SwerveModule {
     public SwerveModuleState getLastDesiredState() {
         return lastDesiredState;
     }
+
+    public SwerveModuleState getLastTorqueFeedforward() {
+        return lastTorqueFeedforwardState;
+    }
+
 
     /**
      * @see SwerveModuleIO#setNeutralMode(NeutralModeValue)

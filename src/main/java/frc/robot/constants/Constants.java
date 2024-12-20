@@ -7,7 +7,6 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
-import org.photonvision.PhotonPoseEstimator;
 
 public interface Constants {
     RobotMode CURRENT_MODE = RobotMode.SIM;

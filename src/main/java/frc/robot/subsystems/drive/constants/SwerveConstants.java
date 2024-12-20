@@ -1,6 +1,7 @@
 package frc.robot.subsystems.drive.constants;
 
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import frc.robot.constants.Constants;
 import frc.robot.constants.RobotMap;
@@ -8,6 +9,8 @@ import frc.robot.subsystems.drive.OdometryThreadRunner;
 import frc.robot.subsystems.drive.SwerveModule;
 
 public class SwerveConstants {
+    private static final DCMotor KrakenX60Foc = DCMotor.getKrakenX60Foc(1);
+
     public static final SwerveConfig Config = new SwerveConfig(
             0.0508,
             6.122,
@@ -29,7 +32,8 @@ public class SwerveConstants {
             1,
             2,
             3,
-            0.083984375
+            0.083984375,
+            SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
     public static final SwerveModuleConstants FrontRightModule = new SwerveModuleConstants(
@@ -39,7 +43,8 @@ public class SwerveConstants {
             4,
             5,
             6,
-            -0.421875
+            -0.421875,
+            SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
     public static final SwerveModuleConstants BackLeftModule = new SwerveModuleConstants(
@@ -49,7 +54,8 @@ public class SwerveConstants {
             7,
             8,
             9,
-            0.048828125
+            0.048828125,
+            SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
     public static final SwerveModuleConstants BackRightModule = new SwerveModuleConstants(
@@ -59,7 +65,8 @@ public class SwerveConstants {
             10,
             11,
             12,
-            0.28515625
+            0.28515625,
+            SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
     public record SwerveConfig(
@@ -91,7 +98,8 @@ public class SwerveConstants {
             int driveMotorId,
             int turnMotorId,
             int turnEncoderId,
-            double turnEncoderOffsetRots
+            double turnEncoderOffsetRots,
+            double driveMotorKtNmPerAmp
     ) {
         public static SwerveModule create(
                 final SwerveModuleConstants constants,

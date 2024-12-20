@@ -266,8 +266,13 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         return driveWheelPosition - driveBackOutWheelRotations;
     }
 
+    @SuppressWarnings("DuplicatedCode")
     @Override
-    public void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
+    public void setInputs(
+            final double desiredDriverVelocity,
+            final double desiredTurnerRotations,
+            final double feedforwardAmps
+    ) {
         final double driveVelocityBackOut = (
                 (this.turnVelocity.getValueAsDouble() * couplingRatio)
                         / driveReduction
@@ -277,6 +282,7 @@ public class SwerveModuleIOTalonFXSim implements SwerveModuleIO {
         odometryThreadRunner.updateControlRequest(driveMotor, velocityTorqueCurrentFOC);
         driveMotor.setControl(velocityTorqueCurrentFOC
                 .withVelocity(backedOutDriveVelocity)
+                .withFeedForward(feedforwardAmps)
         );
         turnMotor.setControl(positionVoltage.withPosition(desiredTurnerRotations));
     }

@@ -1,6 +1,5 @@
 package frc.robot;
 
-import choreo.auto.AutoRoutine;
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.event.EventLoop;
@@ -232,6 +231,12 @@ public class Robot extends LoggedRobot {
         autoChooser.addAutoOption(new AutoOption(
                 "Squiggle",
                 autos.squiggleAuto(),
+                Constants.CompetitionType.COMPETITION
+        ));
+
+        autoChooser.addAutoOption(new AutoOption(
+                "Forward",
+                autos.forwardAuto(),
                 Constants.CompetitionType.COMPETITION
         ));
 

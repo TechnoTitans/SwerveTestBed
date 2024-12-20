@@ -52,23 +52,25 @@ public interface SwerveModuleIO {
      * @see SwerveModuleIOInputs
      * @see AutoLog
      */
-    default void updateInputs(final SwerveModuleIOInputs inputs) {
-    }
+    default void updateInputs(final SwerveModuleIOInputs inputs) {}
 
     /**
      * Config motors call, should only be invoked once on initialize
      */
-    default void config() {
-    }
+    default void config() {}
 
     /**
      * Set the desired inputs of the {@link SwerveModuleIO}
      *
      * @param desiredDriverVelocity  the desired driver motor velocity (in mechanism rots/sec)
      * @param desiredTurnerRotations the desired turner motor rotations (in mechanism rotations)
+     * @param feedforwardAmps        the desired feedforward current (in Amps)
      */
-    default void setInputs(final double desiredDriverVelocity, final double desiredTurnerRotations) {
-    }
+    default void setInputs(
+            final double desiredDriverVelocity,
+            final double desiredTurnerRotations,
+            final double feedforwardAmps
+    ) {}
 
     /**
      * Characterize the driving motor by applying a voltage, while holding/keeping the turning motor at a constant angle
@@ -76,8 +78,7 @@ public interface SwerveModuleIO {
      * @param driveVolts             volts to apply to the drive motor
      * @param desiredTurnerRotations rotations to hold the turn motor at
      */
-    default void setDriveCharacterizationVolts(final double driveVolts, final double desiredTurnerRotations) {
-    }
+    default void setDriveCharacterizationVolts(final double driveVolts, final double desiredTurnerRotations) {}
 
     /**
      * Characterize the driving motor by applying a torque current, while holding/keeping the turning motor at a
@@ -86,8 +87,10 @@ public interface SwerveModuleIO {
      * @param driveTorqueCurrentAmps torque current amps to apply to the drive motor
      * @param desiredTurnerRotations rotations to hold the turn motor at
      */
-    default void setDriveCharacterizationAmps(final double driveTorqueCurrentAmps, final double desiredTurnerRotations) {
-    }
+    default void setDriveCharacterizationAmps(
+            final double driveTorqueCurrentAmps,
+            final double desiredTurnerRotations
+    ) {}
 
     /**
      * Set the desired {@link NeutralModeValue} of the drive motor on this module
@@ -95,6 +98,5 @@ public interface SwerveModuleIO {
      * @param neutralMode the desired {@link NeutralModeValue}
      * @see NeutralModeValue
      */
-    default void setNeutralMode(final NeutralModeValue neutralMode) {
-    }
+    default void setNeutralMode(final NeutralModeValue neutralMode) {}
 }

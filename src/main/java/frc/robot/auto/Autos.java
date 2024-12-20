@@ -19,9 +19,6 @@ import java.util.Set;
 public class Autos {
     public static final String LogKey = "Auto";
 
-    private static final double TranslationToleranceMeters = 0.5;
-    private static final double TimeToleranceSeconds = 0.1;
-
     private final Swerve swerve;
     private final PhotonVision photonVision;
     private final AutoFactory autoFactory;
@@ -85,6 +82,24 @@ public class Autos {
         simpleSquiggle.atTime(0.33).onTrue(
                 Commands.print("REACHED MARKER")
         );
+
+        simpleSquiggle.done().onTrue(swerve.stopCommand());
+
+        return routine;
+    }
+
+    public AutoRoutine forwardAuto() {
+        final AutoRoutine routine = autoFactory.newRoutine("Forward");
+        final AutoTrajectory forwardTraj = routine.trajectory("Forward");
+
+        routine.active().whileTrue(
+                Commands.sequence(
+                        routine.resetOdometry(forwardTraj),
+                        forwardTraj.cmd()
+                )
+        );
+
+        forwardTraj.done().onTrue(swerve.stopCommand());
 
         return routine;
     }
