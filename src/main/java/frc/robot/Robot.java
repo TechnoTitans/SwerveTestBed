@@ -190,6 +190,9 @@ public class Robot extends LoggedRobot {
     }
 
     @Override
+    public void disabledPeriodic() {}
+
+    @Override
     public void autonomousInit() {}
 
     @Override
@@ -222,6 +225,9 @@ public class Robot extends LoggedRobot {
     public void testPeriodic() {
         testEventLoop.poll();
     }
+
+    @Override
+    public void simulationPeriodic() {}
 
     public void configureStateTriggers() {
         endgameTrigger.onTrue(ControllerUtils.rumbleForDurationCommand(driverController.getHID(), GenericHID.RumbleType.kBothRumble, 0.5, 1));
