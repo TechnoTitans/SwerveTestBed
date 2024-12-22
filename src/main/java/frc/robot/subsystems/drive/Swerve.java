@@ -88,12 +88,15 @@ public class Swerve extends SubsystemBase {
     private boolean holonomicControllerActive = false;
     private Pose2d holonomicPoseTarget = new Pose2d();
     private final HolonomicDriveWithPIDController holonomicDriveWithPIDController;
+    private final PIDController holdAxisPID = new PIDController(5, 0, 0);
 
     private final HolonomicChoreoController choreoController;
 
     private final SysIdRoutine linearVoltageSysIdRoutine;
     private final SysIdRoutine linearTorqueCurrentSysIdRoutine;
     private final SysIdRoutine angularVoltageSysIdRoutine;
+
+    public enum DriveAxis {X, Y}
 
     public Swerve(
             final Constants.RobotMode mode,
@@ -559,6 +562,45 @@ public class Swerve extends SubsystemBase {
                 }).until(holonomicDriveWithPIDController::atReference),
                 runOnce(this::stop)
         ).finallyDo(() -> holonomicControllerActive = false);
+    }
+
+    public Command holdAxisFacingAngleAndDrive(
+            final double holdPosition,
+            final DriveAxis holdAxis,
+            final double driveSpeed,
+            final Supplier<Pose2d> poseTarget
+    ) {
+        return Commands.sequence(
+                runOnce(() -> {
+                    headingControllerActive = true;
+                    headingController.reset();
+                    holdAxisPID.reset();
+                }),
+                run(() -> {
+                    final Pose2d currentPose = getPose();
+                    this.headingTarget = currentPose
+                            .getTranslation()
+                            .minus(poseTarget.get().getTranslation())
+                            .getAngle();
+
+                    final double holdEffort = holdAxisPID.calculate(
+                            holdAxis == DriveAxis.X
+                                    ? currentPose.getX()
+                                    : currentPose.getY(),
+                            holdPosition
+                    );
+
+                    final double xSpeed = holdAxis == DriveAxis.X ? holdEffort : driveSpeed;
+                    final double ySpeed = holdAxis == DriveAxis.Y ? holdEffort : driveSpeed;
+                    drive(
+                            xSpeed,
+                            ySpeed,
+                            headingController.calculate(getYaw().getRadians(), headingTarget.getRadians()),
+                            true,
+                            false
+                    );
+                })
+        ).finallyDo(() -> headingControllerActive = false);
     }
 
     public Command driveToPose(final Supplier<Pose2d> poseSupplier, final Pose2d poseTolerance) {

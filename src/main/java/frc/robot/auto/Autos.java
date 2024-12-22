@@ -3,21 +3,24 @@ package frc.robot.auto;
 import choreo.auto.AutoFactory;
 import choreo.auto.AutoRoutine;
 import choreo.auto.AutoTrajectory;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.Robot;
+import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.vision.PhotonVision;
 import org.littletonrobotics.junction.Logger;
 
+import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 @SuppressWarnings("DuplicatedCode")
 public class Autos {
     public static final String LogKey = "Auto";
+    private static final double NoteSearchEndingToleranceMeters = 0.25;
 
     private final Swerve swerve;
     private final PhotonVision photonVision;
@@ -34,7 +37,7 @@ public class Autos {
             swerve::getPose,
             photonVision::resetPosition,
             swerve::followChoreoSample,
-            Robot.IsRedAlliance.getAsBoolean(),
+            true,
             swerve,
             new AutoFactory.AutoBindings(),
             (trajectory, trajectoryStarting) -> {
@@ -48,13 +51,6 @@ public class Autos {
                     trajectoryStarting
                 );
             }
-        );
-    }
-
-    private Command resetPose(final AutoTrajectory swerveSample) {
-        return Commands.defer(() ->
-                photonVision.resetPoseCommand(swerveSample.getInitialPose().orElse(swerve.getPose())),
-                Set.of()
         );
     }
 
@@ -104,16 +100,114 @@ public class Autos {
         return routine;
     }
 
-    public EventLoop followNote() {
-        final EventLoop eventLoop = new EventLoop();
-        final Trigger trigger = new Trigger(eventLoop, DriverStation::isAutonomousEnabled);
+    private Command driveToNextNoteDumb(
+            final Trigger hasNote,
+            final Supplier<Pose2d> finishAtPose,
+            final List<AutoTrajectory> returnTrajectories
+    ) {
+        return Commands.deadline(
+                Commands.waitUntil(
+                        () -> swerve.getPose()
+                                .getTranslation()
+                                .getDistance(
+                                        finishAtPose.get().getTranslation()
+                                ) <= Autos.NoteSearchEndingToleranceMeters
+                ).andThen(swerve.stopCommand().asProxy()),
+                Commands.sequence(
+                        swerve.holdAxisFacingAngleAndDrive(
+                                FieldConstants.FIELD_LENGTH_X_METERS/2,
+                                Swerve.DriveAxis.X,
+                                2,
+                                finishAtPose
+                        ).until(hasNote),
+                        Commands.defer(() -> {
+                            final Pose2d currentPose = swerve.getPose();
+                            double closestDistance = Double.MAX_VALUE;
+                            AutoTrajectory closestTrajectory = null;
 
-        trigger.whileTrue(
-                Commands.repeatingSequence(
-                        swerve.driveToOptionalPose(() -> photonVision.getBestNotePose(swerve::getPose))
+                            if (returnTrajectories.isEmpty()) {
+                                return Commands.none();
+                            }
+
+                            for (final AutoTrajectory trajectory : returnTrajectories) {
+                                final Pose2d initialPose = trajectory.getInitialPose().orElseThrow();
+                                final double distance = initialPose
+                                        .getTranslation()
+                                        .getDistance(currentPose.getTranslation());
+
+                                if (distance < closestDistance || closestTrajectory == null) {
+                                    closestDistance = distance;
+                                    closestTrajectory = trajectory;
+                                }
+                            }
+
+                            return closestTrajectory.cmd();
+                        }, Set.of(swerve))
+                )
+        );
+    }
+
+    public AutoRoutine multiPieceNoPreload() {
+        final AutoRoutine routine = autoFactory.newRoutine("MultiPiece");
+        final AutoTrajectory startFlatToC0 = routine.trajectory("StartFlatToC0");
+        final AutoTrajectory c0ToShootSource = routine.trajectory("C0ToShootSource");
+        final AutoTrajectory shootSourceToC1 = routine.trajectory("ShootSourceToC1");
+        final AutoTrajectory c1ToShootSource = routine.trajectory("C1ToShootSource");
+        final AutoTrajectory shootSourceToC2 = routine.trajectory("ShootSourceToC2");
+        final AutoTrajectory c2ToShootSource2 = routine.trajectory("C2ToShootSource2");
+        final AutoTrajectory shootSource2ToPreload = routine.trajectory("ShootSource2ToPreload");
+        final AutoTrajectory preloadToShootPreload = routine.trajectory("PreloadToShootPreload");
+
+        final Trigger hasNote = routine.observe(NoteState.hasNote);
+        hasNote.onFalse(Commands.waitSeconds(4).andThen(NoteState.setHasNoteCommand(true)));
+
+        routine.active().onTrue(
+                Commands.sequence(
+                        routine.resetOdometry(startFlatToC0),
+                        startFlatToC0.cmd()
                 )
         );
 
-        return eventLoop;
+        final Trigger atC0 = startFlatToC0.done();
+        atC0.and(hasNote).onTrue(c0ToShootSource.cmd());
+        atC0.and(hasNote.negate()).onTrue(driveToNextNoteDumb(
+                hasNote,
+                () -> FieldConstants.AMP_AUTO_NOTE_SEARCH_ENDING_POSE,
+                List.of(c0ToShootSource, c1ToShootSource, c2ToShootSource2)
+        ));
+
+        c0ToShootSource.done().onTrue(
+                Commands.print("Shooting")
+                        .andThen(NoteState.setHasNoteCommand(false))
+                        .andThen(shootSourceToC1.cmd())
+        );
+
+        final Trigger atC1 = shootSourceToC1.done();
+        atC1.and(hasNote).onTrue(c1ToShootSource.cmd());
+        atC1.and(hasNote.negate()).onTrue(driveToNextNoteDumb(
+                hasNote,
+                () -> FieldConstants.AMP_AUTO_NOTE_SEARCH_ENDING_POSE,
+                List.of(c1ToShootSource, c2ToShootSource2)
+        ));
+
+        c1ToShootSource.done().onTrue(
+                Commands.print("Shooting")
+                        .andThen(shootSourceToC2.cmd())
+        );
+
+        final Trigger atC2 = shootSourceToC2.done();
+        atC2.and(hasNote).onTrue(c2ToShootSource2.cmd());
+        atC2.and(hasNote.negate()).onTrue(driveToNextNoteDumb(
+                hasNote,
+                () -> FieldConstants.AMP_AUTO_NOTE_SEARCH_ENDING_POSE,
+                List.of(c2ToShootSource2)
+        ));
+
+        c2ToShootSource2.done().onTrue(Commands.print("Shooting").andThen(shootSource2ToPreload.cmd()));
+        shootSource2ToPreload.done().and(hasNote).onTrue(preloadToShootPreload.cmd());
+
+        preloadToShootPreload.done().onTrue(Commands.print("Shooting").andThen(swerve.stopCommand()));
+
+        return routine;
     }
 }

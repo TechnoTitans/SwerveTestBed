@@ -246,6 +246,12 @@ public class Robot extends LoggedRobot {
                 Constants.CompetitionType.COMPETITION
         ));
 
+        autoChooser.addAutoOption(new AutoOption(
+                "MultiPiece",
+                autos.multiPieceNoPreload(),
+                Constants.CompetitionType.COMPETITION
+        ));
+
         autonomousEnabled.whileTrue(
                 Commands.defer(() -> autoChooser.getSelected().autoRoutine().cmd().asProxy(), Set.of())
         );
