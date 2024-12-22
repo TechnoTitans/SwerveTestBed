@@ -109,6 +109,7 @@ public class RealVisionRunner implements PhotonVisionRunner {
             final PhotonPipelineResult[] pipelineResults = inputs.pipelineResults;
             for (final PhotonPipelineResult result : pipelineResults) {
                 VisionPoseEstimator.update(
+                        inputs.name,
                         aprilTagFieldLayout,
                         currentRobotPose,
                         visionIO.robotToCamera,

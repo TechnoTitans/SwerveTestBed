@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.Robot;
 import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.vision.PhotonVision;
@@ -35,20 +36,20 @@ public class Autos {
 
         this.autoFactory = new AutoFactory(
             swerve::getPose,
-            photonVision::resetPosition,
+            photonVision::resetPose,
             swerve::followChoreoSample,
             true,
             swerve,
             new AutoFactory.AutoBindings(),
-            (trajectory, trajectoryStarting) -> {
+            (trajectory, trajectoryRunning) -> {
                 Logger.recordOutput(
                     Autos.LogKey + "/Trajectory",
-                    trajectory.getPoses()
+                        (Robot.IsRedAlliance.getAsBoolean() ? trajectory.flipped() : trajectory).getPoses()
                 );
 
                 Logger.recordOutput(
-                    Autos.LogKey + "/TrajectoryStarting",
-                    trajectoryStarting
+                    Autos.LogKey + "/TrajectoryRunning",
+                    trajectoryRunning
                 );
             }
         );
@@ -176,11 +177,7 @@ public class Autos {
                 List.of(c0ToShootSource, c1ToShootSource, c2ToShootSource2)
         ));
 
-        c0ToShootSource.done().onTrue(
-                Commands.print("Shooting")
-                        .andThen(NoteState.setHasNoteCommand(false))
-                        .andThen(shootSourceToC1.cmd())
-        );
+        c0ToShootSource.done().onTrue(NoteState.setHasNoteCommand(false).andThen(shootSourceToC1.cmd()));
 
         final Trigger atC1 = shootSourceToC1.done();
         atC1.and(hasNote).onTrue(c1ToShootSource.cmd());
@@ -190,10 +187,7 @@ public class Autos {
                 List.of(c1ToShootSource, c2ToShootSource2)
         ));
 
-        c1ToShootSource.done().onTrue(
-                Commands.print("Shooting")
-                        .andThen(shootSourceToC2.cmd())
-        );
+        c1ToShootSource.done().onTrue(shootSourceToC2.cmd());
 
         final Trigger atC2 = shootSourceToC2.done();
         atC2.and(hasNote).onTrue(c2ToShootSource2.cmd());
@@ -203,10 +197,10 @@ public class Autos {
                 List.of(c2ToShootSource2)
         ));
 
-        c2ToShootSource2.done().onTrue(Commands.print("Shooting").andThen(shootSource2ToPreload.cmd()));
+        c2ToShootSource2.done().onTrue(shootSource2ToPreload.cmd());
         shootSource2ToPreload.done().and(hasNote).onTrue(preloadToShootPreload.cmd());
 
-        preloadToShootPreload.done().onTrue(Commands.print("Shooting").andThen(swerve.stopCommand()));
+        preloadToShootPreload.done().onTrue(swerve.stopCommand());
 
         return routine;
     }

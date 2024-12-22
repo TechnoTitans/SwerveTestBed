@@ -66,6 +66,8 @@ public class PhotonVision extends VirtualSubsystem {
     private final SwerveDrivePoseEstimator poseEstimator;
     private final Map<VisionIO, VisionUpdate> lastVisionUpdateMap;
 
+    private double lastOdomUpdate = -1;
+
     public PhotonVision(
             final Constants.RobotMode robotMode,
             final Swerve swerve,
@@ -91,7 +93,7 @@ public class PhotonVision extends VirtualSubsystem {
                                 swerve.getKinematics(),
                                 swerve.getYaw(),
                                 swerve.getModulePositions(),
-                                new Pose2d()
+                                swerve.getPose()
                         ),
                         PhotonVision.apriltagFieldLayout,
                         visionSystemSim,
@@ -127,7 +129,7 @@ public class PhotonVision extends VirtualSubsystem {
 
         this.lastVisionUpdateMap = new HashMap<>();
         final Pose2d estimatedPose = poseEstimator.getEstimatedPosition();
-        resetPosition(estimatedPose);
+        resetPose(estimatedPose);
     }
 
     public enum EstimationRejectionReason {
@@ -137,7 +139,8 @@ public class PhotonVision extends VirtualSubsystem {
         POSE_NOT_IN_FIELD(3),
         LAST_ESTIMATED_POSE_TIMESTAMP_INVALID_OR_TOO_CLOSE(4),
         POSE_IMPOSSIBLE_VELOCITY(5),
-        FUTURE_TIMESTAMP(6);
+        FUTURE_TIMESTAMP(6),
+        TIMESTAMP_OLDER_THEN_POSE_RESET(7);
 
         private final int id;
         EstimationRejectionReason(final int id) {
@@ -201,6 +204,10 @@ public class PhotonVision extends VirtualSubsystem {
             return EstimationRejectionReason.FUTURE_TIMESTAMP;
         }
 
+        if (visionUpdate.timestamp() <= lastOdomUpdate) {
+            return EstimationRejectionReason.TIMESTAMP_OLDER_THEN_POSE_RESET;
+        }
+
         // Only try calculating this rejection strategy if time > 0
         if (secondsSinceLastUpdate > 0) {
             final Pose2d nextEstimatedPosition2d = nextEstimatedPosition.toPose2d();
@@ -254,7 +261,7 @@ public class PhotonVision extends VirtualSubsystem {
 
             Logger.recordOutput(
                     logKey + "/CameraPose",
-                    new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTE)
+                    new Pose3d(swerve.getPose()).transformBy(inputs.robotToCamera)
             );
 
             final VisionUpdate visionUpdate = runner.getVisionUpdate(visionIO);
@@ -272,6 +279,7 @@ public class PhotonVision extends VirtualSubsystem {
                 Logger.recordOutput(logKey + "/StdDevs", stdDevs.getData());
 
                 lastVisionUpdateMap.put(visionIO, visionUpdate);
+                Logger.recordOutput("LastVisionTimeStamp", visionUpdate.timestamp());
                 poseEstimator.addVisionMeasurement(
                         visionUpdate.estimatedPose().toPose2d(),
                         visionUpdate.timestamp(),
@@ -290,7 +298,7 @@ public class PhotonVision extends VirtualSubsystem {
 
             Logger.recordOutput(
                     logKey + "/CameraPose",
-                    new Pose3d(swerve.getPose()).transformBy(Constants.Vision.ROBOT_TO_REAR_NOTE)
+                    new Pose3d(swerve.getPose()).transformBy(inputs.robotToCamera)
             );
 
             final NoteTrackingResult noteTrackingResult = runner.getNoteTrackingResult(visionIO);
@@ -374,7 +382,9 @@ public class PhotonVision extends VirtualSubsystem {
         );
     }
 
-    public void resetPosition(final Pose2d robotPose, final Rotation2d robotYaw) {
+    public void resetPose(final Pose2d robotPose, final Rotation2d robotYaw) {
+        this.lastOdomUpdate = Timer.getFPGATimestamp();
+        Logger.recordOutput("LastOdomResetTime", this.lastOdomUpdate);
         poseEstimator.resetPosition(robotYaw, swerve.getModulePositions(), robotPose);
         runner.resetRobotPose(GyroUtils.robotPose2dToPose3dWithGyro(
                 new Pose2d(robotPose.getTranslation(), robotYaw),
@@ -386,12 +396,12 @@ public class PhotonVision extends VirtualSubsystem {
         ));
     }
 
-    public void resetPosition(final Pose2d robotPose) {
-        resetPosition(robotPose, swerve.getYaw());
+    public void resetPose(final Pose2d robotPose) {
+        resetPose(robotPose, swerve.getYaw());
     }
 
     public Command resetPoseCommand(final Pose2d robotPose) {
-        return runOnce(() -> resetPosition(robotPose));
+        return runOnce(() -> resetPose(robotPose));
     }
 
     public List<Pose2d> getNotePoses() {

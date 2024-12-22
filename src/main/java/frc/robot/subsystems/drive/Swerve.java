@@ -39,7 +39,7 @@ import frc.robot.subsystems.gyro.Gyro;
 import frc.robot.utils.gyro.GyroUtils;
 import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.teleop.ControllerUtils;
-import frc.robot.utils.teleop.Profiler;
+import frc.robot.utils.teleop.SwerveSpeed;
 import org.littletonrobotics.junction.Logger;
 
 import java.util.ArrayList;
@@ -465,8 +465,7 @@ public class Swerve extends SubsystemBase {
             final BooleanSupplier invertYaw
     ) {
         return run(() -> {
-            final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
-            final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+            final SwerveSpeed.Speeds swerveSpeed = SwerveSpeed.getSwerveSpeed();
 
             final Translation2d translationInput = ControllerUtils.calculateLinearVelocity(
                     -xSpeedSupplier.getAsDouble(),
@@ -481,14 +480,11 @@ public class Swerve extends SubsystemBase {
 
             drive(
                     translationInput.getX()
-                            * swerveSpeed.getTranslationSpeed()
-                            * driverProfile.getTranslationSensitivity(),
+                            * swerveSpeed.getTranslationSpeed(),
                     translationInput.getY()
-                            * swerveSpeed.getTranslationSpeed()
-                            * driverProfile.getTranslationSensitivity(),
+                            * swerveSpeed.getTranslationSpeed(),
                     rotationInput
-                            * swerveSpeed.getRotationSpeed()
-                            * driverProfile.getRotationalSensitivity(),
+                            * swerveSpeed.getRotationSpeed(),
                     true,
                     invertYaw.getAsBoolean()
             );
@@ -506,8 +502,7 @@ public class Swerve extends SubsystemBase {
                     headingController.reset();
                 }),
                 run(() -> {
-                    final Profiler.DriverProfile driverProfile = Profiler.getDriverProfile();
-                    final Profiler.SwerveSpeed swerveSpeed = Profiler.getSwerveSpeed();
+                    final SwerveSpeed.Speeds swerveSpeed = SwerveSpeed.getSwerveSpeed();
 
                     final Translation2d translationInput = ControllerUtils.calculateLinearVelocity(
                             -xSpeedSupplier.getAsDouble(),
@@ -518,11 +513,9 @@ public class Swerve extends SubsystemBase {
                     this.headingTarget = rotationTargetSupplier.get();
                     drive(
                             translationInput.getX()
-                                    * swerveSpeed.getTranslationSpeed()
-                                    * driverProfile.getTranslationSensitivity(),
+                                    * swerveSpeed.getTranslationSpeed(),
                             translationInput.getY()
-                                    * swerveSpeed.getTranslationSpeed()
-                                    * driverProfile.getTranslationSensitivity(),
+                                    * swerveSpeed.getTranslationSpeed(),
                             headingController.calculate(getYaw().getRadians(), headingTarget.getRadians()),
                             true,
                             Robot.IsRedAlliance.getAsBoolean()

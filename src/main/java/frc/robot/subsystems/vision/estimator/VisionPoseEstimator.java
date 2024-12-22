@@ -6,6 +6,8 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import frc.robot.constants.Constants;
+import frc.robot.subsystems.vision.PhotonVision;
+import org.littletonrobotics.junction.Logger;
 import org.photonvision.targeting.MultiTargetPNPResult;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
@@ -16,6 +18,7 @@ public class VisionPoseEstimator {
     private VisionPoseEstimator() {}
 
     public static Optional<VisionUpdate> update(
+            final String name,
             final AprilTagFieldLayout fieldLayout,
             final Pose2d currentRobotPose,
             final Transform3d robotToCamera,
@@ -23,16 +26,28 @@ public class VisionPoseEstimator {
     ) {
         // Time in the past -- give up, since the following if expects times > 0
         if (pipelineResult.getTimestampSeconds() < 0) {
+            Logger.recordOutput(
+                    PhotonVision.PhotonLogKey + "/" + name + "/EstimatorResult",
+                    "Timestamp is negative"
+            );
             return Optional.empty();
         }
 
         // If no targets seen, trivial case -- return empty result
         if (!pipelineResult.hasTargets()) {
+            Logger.recordOutput(
+                    PhotonVision.PhotonLogKey + "/" + name + "/EstimatorResult",
+                    "No targets seen"
+            );
             return Optional.empty();
         }
 
         final Optional<MultiTargetPNPResult> maybeMultiTargetResult = pipelineResult.multitagResult;
         if (maybeMultiTargetResult.isPresent()) {
+            Logger.recordOutput(
+                    PhotonVision.PhotonLogKey + "/" + name + "/EstimatorResult",
+                    "Multi-target result"
+            );
             final MultiTargetPNPResult result = maybeMultiTargetResult.get();
             final Transform3d best = result.estimatedPose.best;
             final Pose3d bestPose =
@@ -52,8 +67,17 @@ public class VisionPoseEstimator {
 
             final Optional<Pose3d> maybeTagPose = fieldLayout.getTagPose(target.getFiducialId());
             if (maybeTagPose.isEmpty()) {
+                Logger.recordOutput(
+                        PhotonVision.PhotonLogKey + "/" + name + "/EstimatorResult",
+                        "Single-target Empty"
+                );
                 return Optional.empty();
             }
+
+            Logger.recordOutput(
+                    PhotonVision.PhotonLogKey + "/" + name + "/EstimatorResult",
+                    "Single-target result"
+            );
 
             final Pose3d tagPose = maybeTagPose.get();
             final Pose3d cameraPose0 = tagPose.transformBy(target.getBestCameraToTarget().inverse());

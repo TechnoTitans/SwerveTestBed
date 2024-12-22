@@ -23,7 +23,7 @@ import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.logging.LogUtils;
 import frc.robot.utils.subsystems.VirtualSubsystem;
 import frc.robot.utils.teleop.ControllerUtils;
-import frc.robot.utils.teleop.Profiler;
+import frc.robot.utils.teleop.SwerveSpeed;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -260,8 +260,8 @@ public class Robot extends LoggedRobot {
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
         this.driverController.y(teleopEventLoop).onTrue(swerve.zeroRotationCommand());
 
-        this.driverController.leftBumper(teleopEventLoop).whileTrue(Commands.startEnd(() -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.FAST), () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.NORMAL)));
+        this.driverController.leftBumper(teleopEventLoop).whileTrue(Commands.startEnd(() -> SwerveSpeed.setSwerveSpeed(SwerveSpeed.Speeds.FAST), () -> SwerveSpeed.setSwerveSpeed(SwerveSpeed.Speeds.NORMAL)));
 
-        this.driverController.rightBumper(teleopEventLoop).whileTrue(Commands.startEnd(() -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.SLOW), () -> Profiler.setSwerveSpeed(Profiler.SwerveSpeed.NORMAL)));
+        this.driverController.rightBumper(teleopEventLoop).whileTrue(Commands.startEnd(() -> SwerveSpeed.setSwerveSpeed(SwerveSpeed.Speeds.SLOW), () -> SwerveSpeed.setSwerveSpeed(SwerveSpeed.Speeds.NORMAL)));
     }
 }

@@ -180,6 +180,7 @@ public class SimVisionRunner implements PhotonVisionRunner {
             final PhotonPipelineResult[] pipelineResults = inputs.pipelineResults;
             for (final PhotonPipelineResult result : pipelineResults) {
                 VisionPoseEstimator.update(
+                        inputs.name,
                         aprilTagFieldLayout,
                         currentRobotPose,
                         visionIO.robotToCamera,
@@ -223,10 +224,12 @@ public class SimVisionRunner implements PhotonVisionRunner {
      */
     @Override
     public void resetRobotPose(final Pose3d robotPose) {
-        visionSystemSim.resetRobotPose(robotPose);
+        final Pose2d currentPose = robotPose.toPose2d();
+
         visionIndependentOdometry.resetPosition(
-                robotPose.toPose2d().getRotation(), swerve.getModulePositions(), robotPose.toPose2d()
+                currentPose.getRotation(), swerve.getModulePositions(), currentPose
         );
+        visionSystemSim.resetRobotPose(robotPose);
     }
 
     @Override
