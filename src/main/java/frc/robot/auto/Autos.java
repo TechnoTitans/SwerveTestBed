@@ -160,7 +160,7 @@ public class Autos {
         final AutoTrajectory preloadToShootPreload = routine.trajectory("PreloadToShootPreload");
 
         final Trigger hasNote = routine.observe(NoteState.hasNote);
-        hasNote.onFalse(Commands.waitSeconds(4).andThen(NoteState.setHasNoteCommand(true)));
+        hasNote.onFalse(Commands.waitSeconds(3.2).andThen(NoteState.setHasNoteCommand(true)));
 
         routine.active().onTrue(
                 Commands.sequence(
