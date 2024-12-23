@@ -204,4 +204,61 @@ public class Autos {
 
         return routine;
     }
+
+    public AutoRoutine multiPieceNoPreloadCombined() {
+        final AutoRoutine routine = autoFactory.newRoutine("MultiPieceCombined");
+        final AutoTrajectory startFlatToC0 = routine.trajectory("MultiPieceCombined", 0);
+        final AutoTrajectory c0ToShootSource = routine.trajectory("MultiPieceCombined", 1);
+        final AutoTrajectory shootSourceToC1 = routine.trajectory("MultiPieceCombined", 2);
+        final AutoTrajectory c1ToShootSource = routine.trajectory("MultiPieceCombined", 3);
+        final AutoTrajectory shootSourceToC2 = routine.trajectory("MultiPieceCombined", 4);
+        final AutoTrajectory c2ToShootSource2 = routine.trajectory("MultiPieceCombined", 5);
+        final AutoTrajectory shootSource2ToPreload = routine.trajectory("MultiPieceCombined", 6);
+        final AutoTrajectory preloadToShootPreload = routine.trajectory("MultiPieceCombined", 7);
+
+        final Trigger hasNote = routine.observe(NoteState.hasNote);
+        hasNote.onFalse(Commands.waitSeconds(3.2).andThen(NoteState.setHasNoteCommand(true)));
+
+        routine.active().onTrue(
+                Commands.sequence(
+                        routine.resetOdometry(startFlatToC0),
+                        startFlatToC0.cmd()
+                )
+        );
+
+        final Trigger atC0 = startFlatToC0.done();
+        atC0.and(hasNote).onTrue(c0ToShootSource.cmd());
+        atC0.and(hasNote.negate()).onTrue(driveToNextNoteDumb(
+                hasNote,
+                () -> FieldConstants.AMP_AUTO_NOTE_SEARCH_ENDING_POSE,
+                List.of(c0ToShootSource, c1ToShootSource, c2ToShootSource2)
+        ));
+
+        c0ToShootSource.done().onTrue(NoteState.setHasNoteCommand(false).andThen(shootSourceToC1.cmd()));
+
+        final Trigger atC1 = shootSourceToC1.done();
+        atC1.and(hasNote).onTrue(c1ToShootSource.cmd());
+        atC1.and(hasNote.negate()).onTrue(driveToNextNoteDumb(
+                hasNote,
+                () -> FieldConstants.AMP_AUTO_NOTE_SEARCH_ENDING_POSE,
+                List.of(c1ToShootSource, c2ToShootSource2)
+        ));
+
+        c1ToShootSource.done().onTrue(shootSourceToC2.cmd());
+
+        final Trigger atC2 = shootSourceToC2.done();
+        atC2.and(hasNote).onTrue(c2ToShootSource2.cmd());
+        atC2.and(hasNote.negate()).onTrue(driveToNextNoteDumb(
+                hasNote,
+                () -> FieldConstants.AMP_AUTO_NOTE_SEARCH_ENDING_POSE,
+                List.of(c2ToShootSource2)
+        ));
+
+        c2ToShootSource2.done().onTrue(shootSource2ToPreload.cmd());
+        shootSource2ToPreload.done().and(hasNote).onTrue(preloadToShootPreload.cmd());
+
+        preloadToShootPreload.done().onTrue(swerve.stopCommand());
+
+        return routine;
+    }
 }
