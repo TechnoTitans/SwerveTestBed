@@ -66,7 +66,7 @@ public class PhotonVision extends VirtualSubsystem {
     private final SwerveDrivePoseEstimator poseEstimator;
     private final Map<VisionIO, VisionUpdate> lastVisionUpdateMap;
 
-    private double lastOdomUpdate = -1;
+    private double lastOdomReset = -1;
 
     public PhotonVision(
             final Constants.RobotMode robotMode,
@@ -204,7 +204,7 @@ public class PhotonVision extends VirtualSubsystem {
             return EstimationRejectionReason.FUTURE_TIMESTAMP;
         }
 
-        if (visionUpdate.timestamp() <= lastOdomUpdate) {
+        if (visionUpdate.timestamp() <= lastOdomReset) {
             return EstimationRejectionReason.TIMESTAMP_OLDER_THEN_POSE_RESET;
         }
 
@@ -383,8 +383,8 @@ public class PhotonVision extends VirtualSubsystem {
     }
 
     public void resetPose(final Pose2d robotPose, final Rotation2d robotYaw) {
-        this.lastOdomUpdate = Timer.getFPGATimestamp();
-        Logger.recordOutput("LastOdomResetTime", this.lastOdomUpdate);
+        this.lastOdomReset = Timer.getFPGATimestamp();
+        Logger.recordOutput("LastOdomResetTime", this.lastOdomReset);
         poseEstimator.resetPosition(robotYaw, swerve.getModulePositions(), robotPose);
         runner.resetRobotPose(GyroUtils.robotPose2dToPose3dWithGyro(
                 new Pose2d(robotPose.getTranslation(), robotYaw),
