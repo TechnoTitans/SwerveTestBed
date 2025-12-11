@@ -2,6 +2,7 @@ package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.hal.AllianceStationID;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.event.EventLoop;
@@ -287,5 +288,7 @@ public class Robot extends LoggedRobot {
                         () -> SwerveSpeed.setSwerveSpeed(SwerveSpeed.Speeds.SLOW),
                         () -> SwerveSpeed.setSwerveSpeed(SwerveSpeed.Speeds.NORMAL)
                 ).withName("SwerveSpeedSlow"));
+
+        this.driverController.y().onTrue(Commands.runOnce(() -> photonVision.resetPose(Pose2d.kZero)));
     }
 }
