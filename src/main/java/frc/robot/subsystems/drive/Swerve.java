@@ -67,7 +67,7 @@ public class Swerve extends SubsystemBase {
     private final LoggedTrigger allowedToChangeForwardDirection;
 
     private final SwerveIO swerveIO;
-    private final SwerveIO.SwerveIOInputs inputs;
+    private final SwerveIOInputsAutoLogged inputs;
 
     private final SwerveDriveKinematics kinematics;
     private final SwerveDrivePoseEstimator replayPoseEstimator;
@@ -143,7 +143,7 @@ public class Swerve extends SubsystemBase {
             case SIM -> new SwerveIOSim(drivetrainConstants, moduleConstants);
             case REPLAY, DISABLED -> new SwerveIO() {};
         };
-        this.inputs = new SwerveIO.SwerveIOInputs();
+        this.inputs = new SwerveIOInputsAutoLogged();
 
         final Translation2d[] moduleOffsets = new Translation2d[moduleConfigs.length];
         for (int i = 0; i < moduleOffsets.length; i++) {

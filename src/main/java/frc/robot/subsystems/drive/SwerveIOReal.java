@@ -27,6 +27,7 @@ public class SwerveIOReal implements SwerveIO {
     private final CircularBuffer<SwerveDrivetrain.SwerveDriveState> stateBuffer;
     private final SwerveDrivetrain<TalonFX, TalonFX, CANcoder> drivetrain;
 
+    @SafeVarargs
     public SwerveIOReal(
             final SwerveDrivetrainConstants drivetrainConstants,
             final SwerveModuleConstants<

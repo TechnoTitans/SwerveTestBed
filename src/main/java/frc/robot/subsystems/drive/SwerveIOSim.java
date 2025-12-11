@@ -34,6 +34,7 @@ public class SwerveIOSim implements SwerveIO {
     private final CircularBuffer<SwerveDrivetrain.SwerveDriveState> stateBuffer;
     private final SwerveDrivetrain<TalonFX, TalonFX, CANcoder> drivetrain;
 
+    @SafeVarargs
     public SwerveIOSim(
             final SwerveDrivetrainConstants drivetrainConstants,
             final SwerveModuleConstants<
