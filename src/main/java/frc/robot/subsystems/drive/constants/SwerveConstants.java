@@ -25,13 +25,13 @@ public class SwerveConstants {
     public static final int ModuleCount = 4;
     public static final SwerveConfig Config = new SwerveConfig(
             HardwareConstants.CANBus.CANIVORE,
-            0.048819,
-            6.746031746031747,
+            0.049,
+            6.122,
             150.0 / 7.0,
             50.0 / 17.0,
-            Units.inchesToMeters(22.75),
-            Units.inchesToMeters(22.75),
-            Units.feetToMeters(15.0),
+            Units.inchesToMeters(24),
+            Units.inchesToMeters(24),
+            Units.feetToMeters(16),
             4 * Math.PI,
             6 * Math.PI,
             Translation2d.kZero
@@ -54,7 +54,7 @@ public class SwerveConstants {
             1,
             2,
             3,
-            0.36376953125,
+            0.083984375,
             SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
@@ -65,7 +65,7 @@ public class SwerveConstants {
             4,
             5,
             6,
-            -0.361328125,
+            -0.421875,
             SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
@@ -76,7 +76,7 @@ public class SwerveConstants {
             7,
             8,
             9,
-            -0.41259765625,
+            0.048828125,
             SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
@@ -87,7 +87,7 @@ public class SwerveConstants {
             10,
             11,
             12,
-            0.4130859375,
+            0.28515625,
             SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
