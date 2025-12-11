@@ -1,6 +1,7 @@
 package frc.robot.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -43,13 +44,7 @@ public class PhotonVision extends VirtualSubsystem {
 
     public static final AprilTagFieldLayout apriltagFieldLayout;
     static {
-        try {
-            apriltagFieldLayout = new AprilTagFieldLayout(
-                    Filesystem.getDeployDirectory().getPath() + "/2025-reefscape-reef.json");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-//        apriltagFieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+        apriltagFieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
         apriltagFieldLayout.setOrigin(AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide);
     }
 
