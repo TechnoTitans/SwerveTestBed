@@ -23,20 +23,24 @@ import static frc.robot.subsystems.drive.constants.SwerveConstants.ModuleCount;
 
 public interface SwerveIO {
     class SwerveIOInputs implements LoggableInputs {
+        private static final SwerveDriveState[] DefaultStates = new SwerveDriveState[0];
+
         public SwerveDriveState[] states = new SwerveDriveState[0];
         public Rotation3d gyroRotation3d = Rotation3d.kZero;
+        public double currentTimeSecondsCTRE = 0;
 
         @Override
         public void toLog(final LogTable table) {
-            table.put("State", SwerveDriveState.struct, states);
+            table.put("States", SwerveDriveState.struct, states);
             table.put("GyroRotation3d", Rotation3d.struct, gyroRotation3d);
+            table.put("CurrentTimeSecondsCTRE", currentTimeSecondsCTRE);
         }
 
         @Override
         public void fromLog(final LogTable table) {
-            final SwerveDriveState[] states = table.get("State", (SwerveDriveState[])null);
-            this.states = states == null ? new SwerveDriveState[0] : states;
+            this.states = table.get("States", DefaultStates);
             this.gyroRotation3d = table.get("GyroRotation3d", Rotation3d.kZero);
+            this.currentTimeSecondsCTRE = table.get("CurrentTimeSecondsCTRE", 0d);
         }
     }
 
@@ -57,6 +61,8 @@ public interface SwerveIO {
             final double timestampSeconds,
             final Matrix<N3, N1> visionMeasurementStdDevs
     ) {}
+
+    default void setOperatorPerspectiveForward(final Rotation2d forwardDirection) {}
 
     class SwerveDriveState extends SwerveDrivetrain.SwerveDriveState implements StructSerializable {
         public static final SwerveDriveStateStruct struct = new SwerveDriveStateStruct();

@@ -10,9 +10,12 @@ import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.util.CircularBuffer;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
@@ -44,7 +47,7 @@ public class SwerveIOSim implements SwerveIO {
                 TalonFX::new, TalonFX::new, CANcoder::new,
                 drivetrainConstants, 250,
                 Constants.Vision.STATE_STD_DEVS,
-                Constants.Vision.VISION_STD_DEV_COEFFS,
+                VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(80)),
                 moduleConstants
         );
         this.drivetrain.registerTelemetry(state -> {
@@ -81,6 +84,7 @@ public class SwerveIOSim implements SwerveIO {
         }
 
         inputs.gyroRotation3d = drivetrain.getRotation3d();
+        inputs.currentTimeSecondsCTRE = Utils.getCurrentTimeSeconds();
     }
 
     @Override
@@ -96,13 +100,18 @@ public class SwerveIOSim implements SwerveIO {
     @Override
     public void addVisionMeasurement(
             final Pose2d visionRobotPoseMeters,
-            final double timestampSeconds,
+            final double timestampSecondsCTRE,
             final Matrix<N3, N1> visionMeasurementStdDevs
     ) {
         drivetrain.addVisionMeasurement(
                 visionRobotPoseMeters,
-                Utils.fpgaToCurrentTime(timestampSeconds),
+                timestampSecondsCTRE,
                 visionMeasurementStdDevs
         );
+    }
+
+    @Override
+    public void setOperatorPerspectiveForward(final Rotation2d forwardDirection) {
+        drivetrain.setOperatorPerspectiveForward(forwardDirection);
     }
 }
