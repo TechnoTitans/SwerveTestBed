@@ -268,6 +268,11 @@ public class Robot extends LoggedRobot {
 
     public void configureAutos() {
         autonomousEnabled.whileTrue(Commands.deferredProxy(() -> autoChooser.getSelected().cmd()));
+
+        autoChooser.addAutoOption(new AutoOption(
+                "Straight",
+                autos::straight
+        ));
     }
 
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
