@@ -3,7 +3,6 @@ package frc.robot;
 import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
@@ -12,20 +11,22 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
-import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
 import frc.robot.subsystems.vision.PhotonVision;
 import frc.robot.utils.closeables.ToClose;
+import frc.robot.utils.commands.LoggedTrigger;
+import frc.robot.utils.commands.RobotModeLoggedTriggers;
 import frc.robot.utils.ctre.RefreshAll;
 import frc.robot.utils.logging.LoggedCommandScheduler;
 import frc.robot.utils.subsystems.VirtualSubsystem;
+import frc.robot.utils.teleop.ControllerUtils;
+import frc.robot.utils.teleop.SwerveSpeed;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -40,6 +41,7 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 public class Robot extends LoggedRobot {
+    protected static final String LogKey = "Robot";
     private static final String AKitLogPath = "/U/logs";
     private static final String HootLogPath = "/U/logs";
 
@@ -54,18 +56,22 @@ public class Robot extends LoggedRobot {
 
     public final Swerve swerve = new Swerve(
             Constants.CURRENT_MODE,
-            HardwareConstants.GYRO,
-            SwerveConstants.FrontLeftModule,
-            SwerveConstants.FrontRightModule,
-            SwerveConstants.BackLeftModule,
-            SwerveConstants.BackRightModule
+            SwerveConstants.CTRESwerve.DrivetrainConstants,
+            new SwerveConstants.SwerveModuleConfig[]{
+                    SwerveConstants.FrontLeftModule,
+                    SwerveConstants.FrontRightModule,
+                    SwerveConstants.BackLeftModule,
+                    SwerveConstants.BackRightModule
+            },
+            SwerveConstants.CTRESwerve.FrontLeft,
+            SwerveConstants.CTRESwerve.FrontRight,
+            SwerveConstants.CTRESwerve.BackLeft,
+            SwerveConstants.CTRESwerve.BackRight
     );
 
-    //TODO: Robot doesnt have coprocessor or cameras
     public final PhotonVision photonVision = new PhotonVision(
             Constants.RobotMode.DISABLED,
-            swerve,
-            swerve.getPoseEstimator()
+            swerve
     );
 
     public final Autos autos = new Autos(
@@ -94,9 +100,13 @@ public class Robot extends LoggedRobot {
     private final EventLoop teleopEventLoop = new EventLoop();
     private final EventLoop testEventLoop = new EventLoop();
 
-    private final Trigger disabled = RobotModeTriggers.disabled();
-    private final Trigger teleopEnabled = RobotModeTriggers.teleop();
-    private final Trigger autonomousEnabled = RobotModeTriggers.autonomous();
+    private final LoggedTrigger.Group group = LoggedTrigger.Group.from(LogKey);
+    private final LoggedTrigger disabled = RobotModeLoggedTriggers.disabled(group);
+    private final LoggedTrigger teleopEnabled = RobotModeLoggedTriggers.teleop(group);
+    private final LoggedTrigger autonomousEnabled = RobotModeLoggedTriggers.autonomous(group);
+    private final LoggedTrigger endgameTrigger = group.t("endgame", () -> DriverStation.getMatchTime() <= 20)
+            .and(DriverStation::isFMSAttached)
+            .and(RobotModeTriggers.teleop());
 
     @Override
     public void robotInit() {
@@ -238,21 +248,6 @@ public class Robot extends LoggedRobot {
         CommandScheduler.getInstance().cancelAll();
 
         driverController.leftBumper(testEventLoop).onTrue(Commands.runOnce(SignalLogger::stop));
-
-        driverController.b().whileTrue(swerve.wheelRadiusCharacterization());
-
-//        driverController.y(testEventLoop).whileTrue(
-//                swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kForward)
-//        );
-//        driverController.a(testEventLoop).whileTrue(
-//                swerve.angularVoltageSysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse)
-//        );
-//        driverController.b(testEventLoop).whileTrue(
-//                swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kForward)
-//        );
-//        driverController.x(testEventLoop).whileTrue(
-//                swerve.angularVoltageSysIdDynamicCommand(SysIdRoutine.Direction.kReverse)
-//        );
     }
 
     @Override
@@ -264,20 +259,28 @@ public class Robot extends LoggedRobot {
     public void simulationPeriodic() {}
 
     public void configureStateTriggers() {
+        endgameTrigger.onTrue(ControllerUtils.rumbleForDurationCommand(
+                driverController.getHID(), GenericHID.RumbleType.kBothRumble, 0.5, 1)
+        );
+
         disabled.onTrue(swerve.stopCommand());
     }
 
     public void configureAutos() {
         autonomousEnabled.whileTrue(Commands.deferredProxy(() -> autoChooser.getSelected().cmd()));
-
-        autoChooser.addAutoOption(new AutoOption(
-                "Straight",
-                autos::straight,
-                Constants.CompetitionType.COMPETITION
-        ));
     }
 
     public void configureButtonBindings(final EventLoop teleopEventLoop) {
-        this.driverController.y().onTrue(Commands.runOnce(() -> swerve.getGyro().setAngle(Rotation2d.kZero)));
+        this.driverController.rightBumper(teleopEventLoop)
+                .whileTrue(Commands.startEnd(
+                        () -> SwerveSpeed.setSwerveSpeed(SwerveSpeed.Speeds.FAST),
+                        () -> SwerveSpeed.setSwerveSpeed(SwerveSpeed.Speeds.NORMAL)
+                ).withName("SwerveSpeedFast"));
+
+        this.driverController.leftBumper(teleopEventLoop)
+                .whileTrue(Commands.startEnd(
+                        () -> SwerveSpeed.setSwerveSpeed(SwerveSpeed.Speeds.SLOW),
+                        () -> SwerveSpeed.setSwerveSpeed(SwerveSpeed.Speeds.NORMAL)
+                ).withName("SwerveSpeedSlow"));
     }
 }

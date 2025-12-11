@@ -11,7 +11,7 @@ import org.photonvision.simulation.SimCameraProperties;
 
 public enum TitanCamera {
     CAMERA(
-            "CAMERA",
+            "Camera",
             Constants.Vision.CAMERA,
             new PhotonPoseEstimator.ConstrainedSolvepnpParams(false, 1),
             CameraProperties.SEE3CAM_24CUG,

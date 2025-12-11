@@ -7,17 +7,17 @@ import edu.wpi.first.math.geometry.Twist3d;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
 
 public class GyroUtils {
-    private static final double wheelBaseMeters = SwerveConstants.Config.wheelBaseMeters();
-    private static final double trackWidthMeters = SwerveConstants.Config.trackWidthMeters();
+    private static final double WheelBaseMeters = SwerveConstants.Config.wheelBaseMeters();
+    private static final double TrackWidthMeters = SwerveConstants.Config.trackWidthMeters();
 
     public static Pose3d robotPose2dToPose3dWithGyro(final Pose2d pose2d, final Rotation3d gyroRotation) {
         return new Pose3d(pose2d)
                 .exp(new Twist3d(
-                        0, 0, Math.abs(gyroRotation.getY()) * wheelBaseMeters * 0.5,
+                        0, 0, Math.abs(gyroRotation.getY()) * WheelBaseMeters * 0.5,
                         0, gyroRotation.getY(), 0
                 ))
                 .exp(new Twist3d(
-                        0, 0, Math.abs(gyroRotation.getX()) * trackWidthMeters * 0.5,
+                        0, 0, Math.abs(gyroRotation.getX()) * TrackWidthMeters * 0.5,
                         gyroRotation.getX(), 0, 0
                 ));
     }
