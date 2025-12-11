@@ -463,7 +463,7 @@ public class Swerve extends SubsystemBase {
                 ySpeedMetersPerSec.getAsDouble(),
                 omegaRadsPerSec.getAsDouble(),
                 forwardPerspective
-        ));
+        )).withName("DriveFieldRelative");
     }
 
     public Command driveRobotRelative(
@@ -475,7 +475,7 @@ public class Swerve extends SubsystemBase {
                 xSpeedMeterPerSec.getAsDouble(),
                 ySpeedMetersPerSec.getAsDouble(),
                 omegaRadsPerSec.getAsDouble()
-        ));
+        )).withName("DriveRobotRelative");
     }
 
     public void drive(final ChassisSpeeds speeds) {
