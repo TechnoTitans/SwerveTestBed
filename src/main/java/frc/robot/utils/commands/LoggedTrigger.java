@@ -191,7 +191,7 @@ public class LoggedTrigger implements BooleanSupplier {
                                 current,
                                 command -> {
                                     LoggedCommandScheduler.scheduledBy(command, trigger);
-                                    command.schedule();
+                                    CommandScheduler.getInstance().schedule(command);
                                 },
                                 Command::cancel
                         );

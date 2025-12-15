@@ -10,21 +10,25 @@ import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.util.CircularBuffer;
-import frc.robot.constants.Constants;
+import edu.wpi.first.wpilibj.Timer;
+import frc.robot.subsystems.drive.constants.SwerveConstants.CTRESwerve;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class SwerveIOReal implements SwerveIO {
-    private final Lock stateLock;
-    private final CircularBuffer<SwerveDrivetrain.SwerveDriveState> stateBuffer;
+    private final Lock bufferLock;
+    private int bufferMaxSize = 0;
+    private int bufferOverflowCount = 0;
+    private final int bufferCapacity = CTRESwerve.BufferSize;
+    private CircularBuffer<SwerveDrivetrain.SwerveDriveState> stateBuffer;
+    private CircularBuffer<SwerveDrivetrain.SwerveDriveState> tmpStateBuffer;
+
     private final SwerveDrivetrain<TalonFX, TalonFX, CANcoder> drivetrain;
 
     @SafeVarargs
@@ -33,44 +37,68 @@ public class SwerveIOReal implements SwerveIO {
             final SwerveModuleConstants<
                     TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>... moduleConstants
     ) {
-        this.stateLock = new ReentrantLock();
-        this.stateBuffer = new CircularBuffer<>(20);
+        this.bufferLock = new ReentrantLock();
+        this.stateBuffer = new CircularBuffer<>(bufferCapacity);
+        this.tmpStateBuffer = new CircularBuffer<>(bufferCapacity);
         this.drivetrain = new SwerveDrivetrain<>(
                 TalonFX::new, TalonFX::new, CANcoder::new,
-                drivetrainConstants, 250,
-                Constants.Vision.STATE_STD_DEVS,
-                VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(80)),
+                drivetrainConstants, CTRESwerve.OdometryFreqHz,
+                CTRESwerve.OdometryStdDevs,
+                CTRESwerve.UnusedVisionStdDevs,
                 moduleConstants
         );
         this.drivetrain.registerTelemetry(state -> {
             try {
-                stateLock.lock();
-                stateBuffer.addFirst(state.clone());
+                bufferLock.lock();
+                stateBuffer.addLast(state.clone());
+
+                final int size = stateBuffer.size();
+                bufferMaxSize = size;
+                if (size >= bufferCapacity) {
+                    bufferOverflowCount++;
+                }
             } finally {
-                stateLock.unlock();
+                bufferLock.unlock();
             }
         });
     }
 
     @Override
     public void updateInputs(final SwerveIOInputs inputs) {
+        final int maxSize;
+        final int overflowCount;
+        final CircularBuffer<SwerveDrivetrain.SwerveDriveState> freeBuffer = stateBuffer;
         try {
-            stateLock.lock();
+            bufferLock.lock();
 
-            final int nStates = stateBuffer.size();
-            final SwerveDriveState[] states = new SwerveDriveState[nStates];
-            for (int i = 0; i < nStates; i++) {
-                states[i] = new SwerveDriveState(stateBuffer.get(i));
-            }
+            maxSize = bufferMaxSize;
+            bufferMaxSize = 0;
+            overflowCount = bufferOverflowCount;
+            bufferOverflowCount = 0;
 
-            stateBuffer.clear();
-            inputs.states = states;
+            stateBuffer = tmpStateBuffer;
+            tmpStateBuffer = freeBuffer;
         } finally {
-            stateLock.unlock();
+            bufferLock.unlock();
         }
 
+        final int nStates = freeBuffer.size();
+        final SwerveDriveState[] states = new SwerveDriveState[nStates];
+        for (int i = 0; i < nStates; i++) {
+            states[i] = new SwerveDriveState(freeBuffer.removeFirst());
+        }
+
+        final boolean hasValidState = nStates > 0;
+        inputs.bufferMaxSize = maxSize;
+        inputs.bufferOverflowCount = overflowCount;
+        inputs.stateValid = hasValidState;
+        if (hasValidState) {
+            inputs.state = states[nStates - 1];
+        }
+        inputs.states = states;
         inputs.gyroRotation3d = drivetrain.getRotation3d();
-        inputs.currentTimeSecondsCTRE = Utils.getCurrentTimeSeconds();
+        inputs.fpgaTimeSeconds = Timer.getFPGATimestamp();
+        inputs.currentTimeSeconds = Utils.getCurrentTimeSeconds();
     }
 
     @Override
@@ -86,12 +114,12 @@ public class SwerveIOReal implements SwerveIO {
     @Override
     public void addVisionMeasurement(
             final Pose2d visionRobotPoseMeters,
-            final double timestampSecondsCTRE,
+            final double currentTimestampSeconds,
             final Matrix<N3, N1> visionMeasurementStdDevs
     ) {
         drivetrain.addVisionMeasurement(
                 visionRobotPoseMeters,
-                timestampSecondsCTRE,
+                currentTimestampSeconds,
                 visionMeasurementStdDevs
         );
     }

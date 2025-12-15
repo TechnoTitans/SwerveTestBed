@@ -14,9 +14,13 @@ import com.ctre.phoenix6.swerve.SwerveModuleConstants.DriveMotorArrangement;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants.SteerFeedbackType;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants.SteerMotorArrangement;
 import com.ctre.phoenix6.swerve.SwerveModuleConstantsFactory;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
+import frc.robot.constants.Constants;
 import frc.robot.constants.HardwareConstants;
 
 public class SwerveConstants {
@@ -92,6 +96,19 @@ public class SwerveConstants {
     );
 
     public static class CTRESwerve {
+        public static final double OdometryFreqHz = 250;
+        public static final Vector<N3> OdometryStdDevs = VecBuilder.fill(0.1, 0.1, Units.degreesToRadians(1));
+        public static final Vector<N3> UnusedVisionStdDevs = VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(80));
+        public static final int BufferSize = 40;
+        static {
+            final int minBufferSize = (int) Math.ceil(Constants.LOOP_PERIOD_SECONDS * OdometryFreqHz);
+            if (BufferSize < minBufferSize) {
+                throw new RuntimeException(String.format("OdometryBufferSize of %d is too small, expected size >= %d," +
+                                "since it must fit at least all states recorded within a loop cycle!",
+                        BufferSize, minBufferSize));
+            }
+        }
+
         private static final Slot0Configs DriveGains = new Slot0Configs()
                 .withKS(2.2557).withKV(0).withKA(3.1912)
                 .withKP(30).withKD(0);
@@ -108,7 +125,6 @@ public class SwerveConstants {
         }
 
         private static final double SlipCurrentAmps = 70;
-
         private static final InvertedValue DriveMotorInverted = InvertedValue.CounterClockwise_Positive;
         private static final InvertedValue TurnMotorInverted = InvertedValue.Clockwise_Positive;
         private static final SensorDirectionValue TurnEncoderDirection = SensorDirectionValue.CounterClockwise_Positive;

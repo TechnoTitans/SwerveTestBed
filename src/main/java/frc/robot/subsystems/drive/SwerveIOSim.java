@@ -10,16 +10,15 @@ import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.util.CircularBuffer;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
-import frc.robot.constants.Constants;
+import edu.wpi.first.wpilibj.Timer;
+import frc.robot.subsystems.drive.constants.SwerveConstants.CTRESwerve;
 import frc.robot.utils.closeables.ToClose;
 import frc.robot.utils.control.DeltaTime;
 
@@ -27,11 +26,16 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class SwerveIOSim implements SwerveIO {
-    private static final double SIM_UPDATE_PERIOD_SEC = 0.005;
+    private static final double SimUpdatePeriodSec = 0.005;
     private final DeltaTime deltaTime;
 
-    private final Lock stateLock;
-    private final CircularBuffer<SwerveDrivetrain.SwerveDriveState> stateBuffer;
+    private final Lock bufferLock;
+    private int bufferMaxSize = 0;
+    private int bufferOverflowCount = 0;
+    private final int bufferCapacity = CTRESwerve.BufferSize;
+    private CircularBuffer<SwerveDrivetrain.SwerveDriveState> stateBuffer;
+    private CircularBuffer<SwerveDrivetrain.SwerveDriveState> tmpStateBuffer;
+
     private final SwerveDrivetrain<TalonFX, TalonFX, CANcoder> drivetrain;
 
     @SafeVarargs
@@ -42,21 +46,28 @@ public class SwerveIOSim implements SwerveIO {
     ) {
         this.deltaTime = new DeltaTime(true);
 
-        this.stateLock = new ReentrantLock();
-        this.stateBuffer = new CircularBuffer<>(20);
+        this.bufferLock = new ReentrantLock();
+        this.stateBuffer = new CircularBuffer<>(bufferCapacity);
+        this.tmpStateBuffer = new CircularBuffer<>(bufferCapacity);
         this.drivetrain = new SwerveDrivetrain<>(
                 TalonFX::new, TalonFX::new, CANcoder::new,
-                drivetrainConstants, 250,
-                Constants.Vision.STATE_STD_DEVS,
-                VecBuilder.fill(0.6, 0.6, Units.degreesToRadians(80)),
+                drivetrainConstants, CTRESwerve.OdometryFreqHz,
+                CTRESwerve.OdometryStdDevs,
+                CTRESwerve.UnusedVisionStdDevs,
                 moduleConstants
         );
         this.drivetrain.registerTelemetry(state -> {
             try {
-                stateLock.lock();
-                stateBuffer.addFirst(state.clone());
+                bufferLock.lock();
+                stateBuffer.addLast(state.clone());
+
+                final int size = stateBuffer.size();
+                bufferMaxSize = size;
+                if (size >= bufferCapacity) {
+                    bufferOverflowCount++;
+                }
             } finally {
-                stateLock.unlock();
+                bufferLock.unlock();
             }
         });
 
@@ -64,28 +75,50 @@ public class SwerveIOSim implements SwerveIO {
                 () -> drivetrain.updateSimState(deltaTime.get(), RobotController.getBatteryVoltage())
         );
         ToClose.add(simUpdateNotifier);
-        simUpdateNotifier.startPeriodic(SIM_UPDATE_PERIOD_SEC);
+        simUpdateNotifier.startPeriodic(SimUpdatePeriodSec);
     }
 
     @Override
     public void updateInputs(final SwerveIOInputs inputs) {
+        final int maxSize;
+        final int overflowCount;
+        final CircularBuffer<SwerveDrivetrain.SwerveDriveState> freeBuffer = stateBuffer;
         try {
-            stateLock.lock();
+            bufferLock.lock();
 
-            final int nStates = stateBuffer.size();
-            final SwerveDriveState[] states = new SwerveDriveState[nStates];
-            for (int i = 0; i < nStates; i++) {
-                states[i] = new SwerveDriveState(stateBuffer.get(i));
-            }
+            maxSize = bufferMaxSize;
+            bufferMaxSize = 0;
+            overflowCount = bufferOverflowCount;
+            bufferOverflowCount = 0;
 
-            stateBuffer.clear();
-            inputs.states = states;
+            stateBuffer = tmpStateBuffer;
+            tmpStateBuffer = freeBuffer;
         } finally {
-            stateLock.unlock();
+            bufferLock.unlock();
         }
 
+        final int nStates = freeBuffer.size();
+//        final double[] fpgaTimestamps = new double[nStates];
+        final SwerveDriveState[] states = new SwerveDriveState[nStates];
+        for (int i = 0; i < nStates; i++) {
+            final SwerveDrivetrain.SwerveDriveState state = freeBuffer.removeFirst();
+//            fpgaTimestamps[i] = Utils.currentTimeToFPGATime(state.Timestamp);
+            states[i] = new SwerveDriveState(state);
+        }
+
+        final boolean hasValidState = nStates > 0;
+        inputs.bufferMaxSize = maxSize;
+        inputs.bufferOverflowCount = overflowCount;
+        inputs.stateValid = hasValidState;
+        if (hasValidState) {
+            inputs.state = states[nStates - 1];
+        }
+        inputs.states = states;
         inputs.gyroRotation3d = drivetrain.getRotation3d();
-        inputs.currentTimeSecondsCTRE = Utils.getCurrentTimeSeconds();
+        inputs.fpgaTimeSeconds = Timer.getFPGATimestamp();
+        inputs.currentTimeSeconds = Utils.getCurrentTimeSeconds();
+
+//        inputs.fpgaTimestamps = fpgaTimestamps;
     }
 
     @Override
@@ -101,12 +134,12 @@ public class SwerveIOSim implements SwerveIO {
     @Override
     public void addVisionMeasurement(
             final Pose2d visionRobotPoseMeters,
-            final double timestampSecondsCTRE,
+            final double currentTimestampSeconds,
             final Matrix<N3, N1> visionMeasurementStdDevs
     ) {
         drivetrain.addVisionMeasurement(
                 visionRobotPoseMeters,
-                timestampSecondsCTRE,
+                currentTimestampSeconds,
                 visionMeasurementStdDevs
         );
     }

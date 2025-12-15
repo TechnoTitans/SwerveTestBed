@@ -161,7 +161,10 @@ public class SimVisionRunner implements PhotonVisionRunner {
             final Map<VisionIOApriltagsSim, VisionIO.VisionIOInputs> apriltagVisionIOInputsMap
     ) {
         this.swerve = swerve;
+        this.swerve.onStateValid(state ->
+                visionIndependentOdometry.resetPosition(state.RawHeading, state.ModulePositions, swerve.getPose()));
         this.visionIndependentOdometry = visionIndependentOdometry;
+
         this.visionSystemSim = visionSystemSim;
         this.visionSystemSim.addAprilTags(aprilTagFieldLayout);
 
