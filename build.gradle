@@ -1,3 +1,8 @@
+//file:noinspection DependencyNotationArgument
+
+import edu.wpi.first.gradlerio.GradleRIOPlugin
+import groovy.json.JsonSlurper
+
 plugins {
     id "java"
     id "edu.wpi.first.GradleRIO" version "2026.1.1-beta-1"
@@ -8,13 +13,42 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
-def ROBOT_MAIN_CLASS = "frc.robot.Main"
+final def ROBOT_MAIN_CLASS = "frc.robot.Main"
+final def MAX_JAVA_HEAP_SIZE_MB = 100
 
-final MAX_JAVA_HEAP_SIZE_MB = 100;
+enum RobotMode {
+    REAL,
+    SIM,
+    REPLAY,
+    DISABLED
+}
+
+final def robotModeFileText = file("src/main/java/frc/robot/constants/Constants.java").text
+final def modeMatcher = (robotModeFileText =~ /(?i)CURRENT_MODE\s*=\s*RobotMode\.(\w+)/)
+if (!modeMatcher.find()) {
+    throw new GradleException("Could not determine robot mode!")
+}
+
+final def robotModeStr = modeMatcher.group(1).toUpperCase()
+final def robotMode
+try {
+    robotMode = RobotMode.valueOf(robotModeStr)
+} catch (final IllegalArgumentException e) {
+    final def modes = RobotMode.values()*.name()
+    throw new GradleException(
+            "Invalid robot mode: '${robotModeStr}' " +
+                    "Valid modes: ${modes.join(', ')}",
+            e
+    )
+}
+
+final def displaySimGUI = robotMode != RobotMode.REPLAY
+println "Detected robot mode: ${robotMode}"
 
 // Define my targets (RoboRIO) and artifacts (deployable files)
 // This is added by GradleRIO's backing project DeployUtils.
 deploy {
+    //noinspection GroovyAssignabilityCheck
     targets {
         roborio(getTargetTypeClass('RoboRIO')) {
             // Team number is loaded either from the .wpilib/wpilib_preferences.json
@@ -62,7 +96,7 @@ wpi.java.debugJni = false
 // Set this to true to enable desktop support.
 def includeDesktopSupport = true
 
-task(replayWatch, type: JavaExec) {
+tasks.register('replayWatch', JavaExec) {
     mainClass = "org.littletonrobotics.junction.ReplayWatch"
     classpath = sourceSets.main.runtimeClasspath
 }
@@ -91,7 +125,7 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    def akitJson = new groovy.json.JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/AdvantageKit.json").text)
+    def akitJson = new JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/AdvantageKit.json").text)
     annotationProcessor "org.littletonrobotics.akit:akit-autolog:$akitJson.version"
 }
 
@@ -101,7 +135,7 @@ test {
 }
 
 // Simulation configuration (e.g. environment variables).
-wpi.sim.addGui().defaultEnabled = true
+wpi.sim.addGui().defaultEnabled = displaySimGUI
 wpi.sim.addDriverstation()
 
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
@@ -110,7 +144,7 @@ wpi.sim.addDriverstation()
 jar {
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     from sourceSets.main.allSource
-    manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest(ROBOT_MAIN_CLASS)
+    manifest GradleRIOPlugin.javaManifest(ROBOT_MAIN_CLASS)
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
@@ -120,6 +154,6 @@ wpi.java.configureExecutableTasks(jar)
 wpi.java.configureTestTasks(test)
 
 // Configure string concat to always inline compile
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     options.compilerArgs.add '-XDstringConcat=inline'
 }
