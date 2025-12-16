@@ -45,6 +45,10 @@ try {
 final def displaySimGUI = robotMode != RobotMode.REPLAY
 println "Detected robot mode: ${robotMode}"
 
+// Simulation configuration (e.g. environment variables).
+wpi.sim.addGui().defaultEnabled = displaySimGUI
+wpi.sim.addDriverstation()
+
 // Define my targets (RoboRIO) and artifacts (deployable files)
 // This is added by GradleRIO's backing project DeployUtils.
 deploy {
@@ -133,10 +137,6 @@ test {
     useJUnitPlatform()
     systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
 }
-
-// Simulation configuration (e.g. environment variables).
-wpi.sim.addGui().defaultEnabled = displaySimGUI
-wpi.sim.addDriverstation()
 
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
 // in order to make them all available at runtime. Also adding the manifest so WPILib
