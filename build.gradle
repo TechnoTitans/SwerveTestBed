@@ -35,11 +35,7 @@ try {
     robotMode = RobotMode.valueOf(robotModeStr)
 } catch (final IllegalArgumentException e) {
     final def modes = RobotMode.values()*.name()
-    throw new GradleException(
-            "Invalid robot mode: '${robotModeStr}' " +
-                    "Valid modes: ${modes.join(', ')}",
-            e
-    )
+    throw new GradleException("Invalid robot mode: '${robotModeStr}\nValid modes: ${modes.join(', ')}", e)
 }
 
 final def displaySimGUI = robotMode != RobotMode.REPLAY
