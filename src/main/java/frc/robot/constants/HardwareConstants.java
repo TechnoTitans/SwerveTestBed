@@ -3,7 +3,7 @@ package frc.robot.constants;
 public class HardwareConstants {
     public enum CANBus {
         RIO("rio"),
-        CANIVORE("CANivore");
+        CANIVORE("CANIVORE");
 
         public final String name;
         CANBus(final String name) {

@@ -1,6 +1,8 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -16,6 +18,7 @@ import frc.robot.auto.AutoChooser;
 import frc.robot.auto.AutoOption;
 import frc.robot.auto.Autos;
 import frc.robot.constants.Constants;
+import frc.robot.constants.HardwareConstants;
 import frc.robot.constants.RobotMap;
 import frc.robot.subsystems.drive.Swerve;
 import frc.robot.subsystems.drive.constants.SwerveConstants;
@@ -201,6 +204,8 @@ public class Robot extends LoggedRobot {
         Logger.start();
 
         Logger.recordOutput("EmptyPose", Pose3d.kZero);
+
+//        final TalonFX motor1 = new TalonFX(1, HardwareConstants.CANBus.CANIVORE.toPhoenix6CANBus());
     }
 
     @Override

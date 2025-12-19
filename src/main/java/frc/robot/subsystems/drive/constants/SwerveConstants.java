@@ -110,8 +110,8 @@ public class SwerveConstants {
         }
 
         private static final Slot0Configs DriveGains = new Slot0Configs()
-                .withKS(2.2557).withKV(0).withKA(3.1912)
-                .withKP(30).withKD(0);
+                .withKS(0).withKV(0).withKA(0)
+                .withKP(5).withKD(0);
 
         private static final Slot0Configs SteerGains = new Slot0Configs()
                 .withKS(0.3).withKV(2.66).withKA(0)
@@ -164,7 +164,7 @@ public class SwerveConstants {
                         .withWheelRadius(Config.wheelRadiusMeters)
                         .withDriveMotorGains(DriveGains)
                         .withSteerMotorGains(SteerGains)
-                        .withDriveMotorClosedLoopOutput(ClosedLoopOutputType.TorqueCurrentFOC)
+                        .withDriveMotorClosedLoopOutput(ClosedLoopOutputType.Voltage)
                         .withSteerMotorClosedLoopOutput(ClosedLoopOutputType.Voltage)
                         .withSlipCurrent(SlipCurrentAmps)
                         .withSpeedAt12Volts(Config.maxLinearVelocityMeterPerSec)
