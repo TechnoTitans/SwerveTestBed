@@ -58,7 +58,7 @@ public class SwerveConstants {
             1,
             2,
             3,
-            0.083984375,
+            -0.08349609375,
             SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
@@ -69,7 +69,7 @@ public class SwerveConstants {
             4,
             5,
             6,
-            -0.421875,
+            0.42626953125000006,
             SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
@@ -80,7 +80,7 @@ public class SwerveConstants {
             7,
             8,
             9,
-            0.048828125,
+            -0.048095703125,
             SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
@@ -91,7 +91,7 @@ public class SwerveConstants {
             10,
             11,
             12,
-            0.28515625,
+            -0.278076171875,
             SwerveConstants.KrakenX60Foc.KtNMPerAmp
     );
 
@@ -110,18 +110,18 @@ public class SwerveConstants {
         }
 
         private static final Slot0Configs DriveGains = new Slot0Configs()
-                .withKS(0).withKV(0).withKA(0)
-                .withKP(5).withKD(0);
+                .withKS(0.13254).withKV(0.11173).withKA(0.0016986)
+                .withKP(0.0027082).withKD(0);
 
         private static final Slot0Configs SteerGains = new Slot0Configs()
-                .withKS(0.3).withKV(2.66).withKA(0)
-                .withKP(100).withKD(0.5)
+                .withKS(0).withKV(0).withKA(0)
+                .withKP(100).withKD(0)
                 .withStaticFeedforwardSign(StaticFeedforwardSignValue.UseClosedLoopSign);
 
         private static final Pigeon2Configuration Pigeon2Configuration = new Pigeon2Configuration(); static {
-            Pigeon2Configuration.MountPose.MountPoseRoll = -0.2720952332019806;
-            Pigeon2Configuration.MountPose.MountPosePitch = 0.06304807960987091;
-            Pigeon2Configuration.MountPose.MountPoseYaw = -1.072310447692871;
+            Pigeon2Configuration.MountPose.MountPoseRoll = -1.0440077781677246;
+            Pigeon2Configuration.MountPose.MountPosePitch = -1.0440077781677246;
+            Pigeon2Configuration.MountPose.MountPoseYaw = -0.6147001385688782;
         }
 
         private static final double SlipCurrentAmps = 70;
@@ -152,7 +152,7 @@ public class SwerveConstants {
         private static final double TurnKsFrictionVolts = 0.2;
 
         public static final SwerveDrivetrainConstants DrivetrainConstants = new SwerveDrivetrainConstants()
-                .withCANBusName(Config.canBus.name())
+                .withCANBusName(Config.canBus.busName)
                 .withPigeon2Id(Gyro.gyroId)
                 .withPigeon2Configs(Pigeon2Configuration);
 
